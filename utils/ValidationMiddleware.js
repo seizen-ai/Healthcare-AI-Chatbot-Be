@@ -3,14 +3,15 @@ import { AppError } from "./AppError.js";
 
 export const inputValidation = (schema) => {
     return (req, res, next) => {
-        const validated = schema.safeParse({
+        const { data, success, error } = schema.safeParse({
           body: req.body,
           query: req.query,
           params: req.params
         });
+        
 
-        if(!validated.success){
-        const formattedErrors = validated.error.errors.map(err => ({
+        if(!success){
+        const formattedErrors = error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message
         }));
@@ -20,9 +21,9 @@ export const inputValidation = (schema) => {
         }
 
         
-        req.body = validated.body;
-        req.query = validated.query;
-        req.params = validated.params;
+        req.body = data.body;
+        req.query = data.query;
+        req.params = data.params;
 
         next();
     };

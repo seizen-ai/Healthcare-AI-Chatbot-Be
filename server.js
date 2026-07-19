@@ -4,8 +4,13 @@ import mongoose from 'mongoose';
 import mongoSanitize from 'express-mongo-sanitize';
 import 'dotenv/config';
 import { globalErrorHandler } from './utils/ErrorMiddleware.js';
-import { catchAsync } from './utils/CatchAsync.js';
-import { AppError } from './utils/AppError.js';
+import kafkaProducer from './kafka/producer/kafka.producer.js';
+import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
+import { retryOperation } from './kafka/utils/kafka.retry.js';
+import { startNotificationService } from './modules/notification/notification.bootstrap.js';
+
+//Routers
+import authRouter from './modules/auth/auth.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,11 +39,9 @@ app.get('/health', async (req, res) => {
     }
 });
 
-app.get('/', catchAsync(
-    async (req,res,next) => {
-    return next(new AppError('Global Error handling is working fine', 400));
-}
-));
+app.use('/api/auth', authRouter);
+
+
 
 
 app.use(globalErrorHandler);
@@ -47,6 +50,13 @@ const startServer = async () => {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Booting up the server...');
         console.log('Database connected sucessfully.');
+
+        await retryOperation(async () => {
+            await ensureKafkaTopics();
+            await kafkaProducer.connect();
+        }, { label: "Kafka", retries: 10, delayMs: 3000 });
+
+        await startNotificationService();
 
         app.listen(PORT, () => {
             console.log(`Server Started Successfully on PORT : ${PORT}`);
