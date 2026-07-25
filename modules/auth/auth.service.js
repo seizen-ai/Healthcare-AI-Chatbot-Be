@@ -6,6 +6,7 @@ import { KAFKA_TOPICS } from "../../kafka/topics/kafka.topics.js";
 import { EMAIL_TYPES } from "../notification/email/email.types.js";
 import { TOKEN_PURPOSES } from "./auth.token.constants.js";
 import { generateVerificationToken, hashVerificationToken } from "../../utils/generateVerificationToken.js";
+import { generateAuthTokens } from '../../utils/generateAuthTokens.js';
 
 
 
@@ -16,27 +17,42 @@ const buildEmailVerificationLink = (rawToken) => {
 
 class authService {
 
+  
     async signup(data) {
         const { username, email, password } = data;
 
         const existingUser = await authRepository.findByEmailOrUsername({ username, email });
 
-        if (existingUser?.email === email) {
-            throw new AppError("This email is already registered.", 400);
-        }
+        if (existingUser) {
+           
+            if (existingUser.email === email && existingUser.isVerfied) {
+                throw new AppError("This email is already registered. Please login.", 400);
+            }
 
-        if (existingUser?.username === username) {
-            throw new AppError("Username is not available.", 400);
+        
+            if (existingUser.username === username) {
+                if (existingUser.isVerfied) {
+                    throw new AppError("Username is not available.", 400);
+                }
+            
+                if (existingUser.email !== email) {
+                    throw new AppError("Username is currently reserved. Please try another.", 400);
+                }
+            }
         }
-
+    
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = await authRepository.createUser({
+
+        
+        const newUser = await authRepository.createUserOrUpdate(email, {
             username,
-            email,
-            password: hashedPassword
+            password: hashedPassword,
+            isVerfied: false 
         });
+
+        
 
         const { rawToken, tokenHash } = generateVerificationToken();
 
@@ -86,6 +102,25 @@ class authService {
         return {
             message: "Email verified successfully. You can now sign in."
         };
+    }
+
+    async login(data){
+        const { email, password, username } = data;
+        const user = await authRepository.findByEmailOrUsername({
+            username,
+            email
+        });
+
+        if(!user) throw new AppError('There is no user associated with this credentials.', 400);
+        if(!user.isVerfied) throw new AppError('Please verify your email to perform this action.', 400);
+
+        const isValid = await bcrypt.compare(password, user.password);
+        if(!isValid) throw new AppError('Incorrect credentials, Please check the credentials and try again.', 400);
+
+
+        const accessToken = await generateAuthTokens(user, data.res);
+
+        return accessToken;
     }
 
 }

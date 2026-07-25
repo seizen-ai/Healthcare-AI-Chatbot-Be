@@ -14,3 +14,11 @@ export const verifyEmail = catchAsync(async (req, res) => {
 
     return res.status(200).json(result);
 });
+
+export const login = catchAsync(async (req, res) => {
+    const data = req.body;
+    data.res = res;
+    const result = await authService.login(data);
+
+    return res.status(200).json(result);
+});

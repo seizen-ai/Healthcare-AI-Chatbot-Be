@@ -31,3 +31,31 @@ const authTokenSchema = new mongoose.Schema({
 authTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const AuthToken = mongoose.model("AuthToken", authTokenSchema);
+
+
+
+const refreshTokenSchema = mongoose.Schema({
+    userId : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'User',
+        required : true
+    },
+    tokenHash : {
+        type : String,
+        required : true,
+        unique : true
+    },
+    expiresAt : {
+        type : Date,
+        required : true
+    },
+    used : {
+      type : Boolean,
+      default : false
+    }
+});
+
+refreshTokenSchema.index({expiresAt : 1}, {expireAfterSeconds : 0});
+
+export const RefreshToken = mongoose.model('RefreshToken',refreshTokenSchema);
+

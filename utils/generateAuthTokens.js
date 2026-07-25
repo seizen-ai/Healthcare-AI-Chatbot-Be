@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import 'dotenv/config'
-import RefreshToken from '../models/refreshTokenSchema.js'; // Apne path ke hisaab se adjust kar lena
+import { RefreshToken } from "../modules/auth/auth.token.model.js";
 
 
 export const generateAuthTokens = async (user, res, oldTokenDoc = null) => {
@@ -11,8 +10,7 @@ export const generateAuthTokens = async (user, res, oldTokenDoc = null) => {
     
     if (oldTokenDoc) {  
         refreshTokenExpiry = oldTokenDoc.expiresAt; 
-    } else {
-        
+    } else {    
         refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
     }
 

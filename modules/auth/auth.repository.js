@@ -4,8 +4,18 @@ import { EMAIL_VERIFICATION_EXPIRY_MS, TOKEN_PURPOSES } from "./auth.token.const
 
 class authRepository {
 
-    async createUser(data) {
-        return User.create(data);
+    
+
+    async createUserOrUpdate(email, updateData) {
+        return User.findOneAndUpdate(
+            { email },
+            { $set: updateData }, 
+            { 
+                new: true, 
+                upsert: true,
+                setDefaultsOnInsert: true
+            }
+        );
     }
 
     async findByEmailOrUsername(data) {
@@ -16,7 +26,7 @@ class authRepository {
             ]
         });
     }
-
+        
     async findUserById(userId) {
         return User.findById(userId);
     }

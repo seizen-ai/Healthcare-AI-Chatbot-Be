@@ -5,6 +5,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import 'dotenv/config';
 import { globalErrorHandler } from './utils/ErrorMiddleware.js';
 import kafkaProducer from './kafka/producer/kafka.producer.js';
+import cookieParser from 'cookie-parser';
 import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
 import { retryOperation } from './kafka/utils/kafka.retry.js';
 import { startNotificationService } from './modules/notification/notification.bootstrap.js';
@@ -15,6 +16,8 @@ import authRouter from './modules/auth/auth.routes.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.set('case sensitive routing', true);
+app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors());
 app.use(mongoSanitize());//To prevent noSQL injection attacks
 app.use(express.json());//json package opener
@@ -40,7 +43,6 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/api/auth', authRouter);
-
 
 
 
