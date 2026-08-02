@@ -1,5 +1,5 @@
 import { User } from "./auth.model.js";
-import { AuthToken } from "./auth.token.model.js";
+import { AuthToken, RefreshToken } from "./auth.token.model.js";
 import { EMAIL_VERIFICATION_EXPIRY_MS, TOKEN_PURPOSES } from "./auth.token.constants.js";
 
 class authRepository {
@@ -55,6 +55,10 @@ class authRepository {
 
     async markUserEmailAsVerified(userId) {
         return User.findByIdAndUpdate(userId, { isVerfied: true });
+    }
+
+    async findRefreshTokenAndDelete(tokenHash){
+        return RefreshToken.findOneAndDelete({ tokenHash });
     }
 
 }

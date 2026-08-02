@@ -7,8 +7,10 @@ import { EMAIL_TYPES } from "../notification/email/email.types.js";
 import { TOKEN_PURPOSES } from "./auth.token.constants.js";
 import { generateVerificationToken, hashVerificationToken } from "../../utils/generateVerificationToken.js";
 import { generateAuthTokens } from '../../utils/generateAuthTokens.js';
-
-
+import { getTokenHash } from "../../utils/getTokenHash.js";
+import { isValidJwt } from "../../utils/generateAuthTokens.js";
+import { CacheService } from "../../redis/services/cache.service.js";
+import { REDIS_KEYS } from "../../redis/constants/redis.constants.js";
 
 const buildEmailVerificationLink = (rawToken) => {
     const apiBaseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
@@ -105,7 +107,7 @@ class authService {
     }
 
     async login(data){
-        const { email, password, username } = data;
+        const { email, password, username, cookie } = data;
         const user = await authRepository.findByEmailOrUsername({
             username,
             email
@@ -118,9 +120,47 @@ class authService {
         if(!isValid) throw new AppError('Incorrect credentials, Please check the credentials and try again.', 400);
 
 
-        const accessToken = await generateAuthTokens(user, data.res);
+        const accessToken = await generateAuthTokens(user, cookie);
 
-        return accessToken;
+        return {
+            message : 'Login Successful',
+            accessToken,
+        }
+    }
+
+    async logout(refreshToken, accessToken) {
+    
+
+    if(refreshToken){
+        const tokenHash = getTokenHash(refreshToken);
+        await authRepository.findRefreshTokenAndDelete(tokenHash);
+    }
+   
+
+    //Blacklist the token in the centralized redis cache if it's valid and not expired at the current point of time
+    if(accessToken){
+        const decoded = isValidJwt(accessToken);
+
+        if(!decoded) return;
+
+        //But if jwt is valid then extract the jwtid from the token and mark it as blacklisted in the centralized redis cache
+        const jwtid = decoded.jwtid;
+        const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+        const secondsLeft = decoded.exp - currentTimeInSeconds;
+        
+        const EXPIRE_TIME =  Math.max(0, secondsLeft);
+
+        if (EXPIRE_TIME > 0) {
+            // Use the reusable CacheService instead of the raw redisClient
+            await CacheService.set(
+                REDIS_KEYS.BLACKLISTED_TOKEN(jwtid), 
+                'blacklisted', // Storing a simple string flag
+                EXPIRE_TIME
+            );
+        }
+    }
+
+    return;
     }
 
 }

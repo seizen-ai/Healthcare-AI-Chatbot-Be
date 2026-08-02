@@ -1,4 +1,4 @@
-import { AppError } from "./AppError.js";
+import { AppError } from "../utils/AppError.js";
 
 
 export const inputValidation = (schema) => {

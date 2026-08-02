@@ -3,13 +3,13 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import mongoSanitize from 'express-mongo-sanitize';
 import 'dotenv/config';
-import { globalErrorHandler } from './utils/ErrorMiddleware.js';
+import { globalErrorHandler } from './middlewares/ErrorMiddleware.js';
 import kafkaProducer from './kafka/producer/kafka.producer.js';
 import cookieParser from 'cookie-parser';
 import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
 import { retryOperation } from './kafka/utils/kafka.retry.js';
 import { startNotificationService } from './modules/notification/notification.bootstrap.js';
-
+import { checkRedisConnection } from './redis/bootstrap/redis.bootstrap.js';
 //Routers
 import authRouter from './modules/auth/auth.routes.js';
 
@@ -57,6 +57,9 @@ const startServer = async () => {
             await ensureKafkaTopics();
             await kafkaProducer.connect();
         }, { label: "Kafka", retries: 10, delayMs: 3000 });
+        //Check the redis connection 
+        checkRedisConnection();
+        
 
         await startNotificationService();
 
