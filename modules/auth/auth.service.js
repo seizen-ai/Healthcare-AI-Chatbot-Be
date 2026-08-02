@@ -13,8 +13,8 @@ import { CacheService } from "../../redis/services/cache.service.js";
 import { REDIS_KEYS } from "../../redis/constants/redis.constants.js";
 
 const buildEmailVerificationLink = (rawToken) => {
-    const apiBaseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-    return `${apiBaseUrl}/api/auth/verify-email/${rawToken}`;
+    const apiBaseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`;
+    return `${apiBaseUrl}/verify-email/${rawToken}`;
 };
 
 class authService {
@@ -161,6 +161,65 @@ class authService {
     }
 
     return;
+    }
+
+    async refresh(data) {
+        const { refreshToken, cookie, clearCookie } = data;
+
+        //Check if token exists in request
+        if (!refreshToken) {
+            throw new AppError('Error : Token not found or Tampered token detected.', 401);
+        }
+
+        //Hash the token
+        const tokenHash = getTokenHash(refreshToken);
+
+        //Check if exists and it's not used, then mark as used immediately (Atomic operation)
+        const tokenDoc = await authRepository.findTokenAndUpdate(
+            { tokenHash: tokenHash, used: false }, 
+            { $set: { used: true } }, 
+            { new: true } 
+        );
+
+        //Handle invalid or reused token
+        if (!tokenDoc) {
+            const reusedToken = await authRepository.findTokenByHash({ tokenHash });
+            
+            // Security Alert: Token reuse detected!
+            if (reusedToken && reusedToken.used === true) {
+                await authRepository.deleteManyRefreshToken({ userId: reusedToken.userId });
+                
+                clearCookie('refreshToken', {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict',
+                    signed: true 
+                });
+                
+                throw new AppError('Security Alert: Suspicious session detected. All devices logged out.', 403);
+            }
+
+            throw new AppError('Provided token is expired or invalid.', 401);
+        }
+
+        //User Validation
+        const user = await authRepository.findUserById(tokenDoc.userId);
+
+        if (!user) {
+            clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                signed: true 
+            });
+            throw new AppError('Cannot generate auth tokens for inactive user.', 404);
+        }
+
+        //Generate New Pair
+        // NOTE: Make sure your `generateAuthTokens` helper is updated to accept the `cookie` function instead of the raw `res` object!
+        const accessToken = await generateAuthTokens(user, cookie, tokenDoc);
+
+        return accessToken;
     }
 
 }

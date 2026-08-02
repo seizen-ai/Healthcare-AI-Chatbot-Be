@@ -1,5 +1,6 @@
 import authService  from "./auth.service.js";
 import { catchAsync } from "../../utils/CatchAsync.js";
+import { ca } from "zod/v4/locales";
 
 
 
@@ -33,7 +34,7 @@ export const login = catchAsync(async (req, res) => {
 //delete that particular refresh token from the refresh token collection in the database
 //and do not nuke all the sessions just nuke the current device -> current session
 export const logout = catchAsync(async (req, res) => {
-    const refreshToken = req.signedCookies.refreshToken;
+    const refreshToken = req.signedCookies?.refreshToken;
     const accessToken =  req.headers.authorization?.split(' ')[1];
 
    
@@ -49,8 +50,26 @@ export const logout = catchAsync(async (req, res) => {
         signed : true
     });
 
-    console.log(req.signedCookies.refreshToken);
+    
     
 
     return res.status(200).json({ message : 'Logout Successful' });
+});
+
+
+export const refresh = catchAsync(async (req, res) => {
+    // Pack all necessary context & methods to pass to the service
+    const data = {
+        refreshToken: req.signedCookies?.refreshToken,
+        cookie: res.cookie.bind(res),
+        clearCookie: res.clearCookie.bind(res) // Pass this so the service can clear cookies on security alerts
+    };
+
+    const accessToken = await authService.refresh(data);
+
+    // Send the standard express response
+    return res.status(200).json({
+        message: 'Session Refresh Successful',
+        accessToken
+    });
 });

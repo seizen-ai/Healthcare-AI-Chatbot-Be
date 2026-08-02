@@ -4,8 +4,6 @@ import { EMAIL_VERIFICATION_EXPIRY_MS, TOKEN_PURPOSES } from "./auth.token.const
 
 class authRepository {
 
-    
-
     async createUserOrUpdate(email, updateData) {
         return User.findOneAndUpdate(
             { email },
@@ -30,6 +28,17 @@ class authRepository {
     async findUserById(userId) {
         return User.findById(userId);
     }
+    
+    async findTokenByHash(tokenHash){
+        return RefreshToken.findOne({ tokenHash })
+    }
+    async findTokenAndUpdate(query, work, options){
+         return RefreshToken.findOneAndUpdate(query, work, options);
+    }
+    async markTokenAsUsed(tokenId) {
+        AuthToken.findOneAndUpdate({ _id : tokenId }, { used : true });
+        return;
+    }
 
     async createEmailVerificationToken(userId, tokenHash) {
         return AuthToken.create({
@@ -49,9 +58,7 @@ class authRepository {
         });
     }
 
-    async markTokenAsUsed(tokenId) {
-        return AuthToken.findByIdAndUpdate(tokenId, { used: true });
-    }
+    
 
     async markUserEmailAsVerified(userId) {
         return User.findByIdAndUpdate(userId, { isVerfied: true });
@@ -59,6 +66,11 @@ class authRepository {
 
     async findRefreshTokenAndDelete(tokenHash){
         return RefreshToken.findOneAndDelete({ tokenHash });
+    }
+
+    async deleteManyRefreshToken(userId){
+        RefreshToken.deleteMany({ userId });
+        return;
     }
 
 }

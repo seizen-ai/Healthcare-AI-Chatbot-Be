@@ -18,7 +18,12 @@ const PORT = process.env.PORT || 5000;
 
 app.set('case sensitive routing', true);
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173', // Must match your Vite frontend URL exactly
+    credentials: true,               // Crucial for sending/receiving httpOnly cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(mongoSanitize());//To prevent noSQL injection attacks
 app.use(express.json());//json package opener
 
