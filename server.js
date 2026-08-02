@@ -46,7 +46,7 @@ app.get('/health', async (req, res) => {
         });
     }
 });
-
+// request initialization.
 app.use('/api/auth', authRouter);
 
 
