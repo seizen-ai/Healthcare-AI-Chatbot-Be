@@ -185,7 +185,7 @@ class authService {
         if (!tokenDoc) {
             const reusedToken = await authRepository.findTokenByHash({ tokenHash });
             
-            // Security Alert: Token reuse detected!
+            //Token reuse detected -> revoke all sessions for this user for their safety -> safety/security > UX
             if (reusedToken && reusedToken.used === true) {
                 await authRepository.deleteManyRefreshToken({ userId: reusedToken.userId });
                 
@@ -215,8 +215,7 @@ class authService {
             throw new AppError('Cannot generate auth tokens for inactive user.', 404);
         }
 
-        //Generate New Pair
-        // NOTE: Make sure your `generateAuthTokens` helper is updated to accept the `cookie` function instead of the raw `res` object!
+        
         const accessToken = await generateAuthTokens(user, cookie, tokenDoc);
 
         return accessToken;

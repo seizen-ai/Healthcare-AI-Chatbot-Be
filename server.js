@@ -12,6 +12,7 @@ import { startNotificationService } from './modules/notification/notification.bo
 import { checkRedisConnection } from './redis/bootstrap/redis.bootstrap.js';
 //Routers
 import authRouter from './modules/auth/auth.routes.js';
+import hospitalRouter from './modules/hospital/hospital.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,7 +49,7 @@ app.get('/health', async (req, res) => {
 });
 // request initialization.
 app.use('/api/auth', authRouter);
-
+app.use('/api/hospital', hospitalRouter);
 
 
 app.use(globalErrorHandler);

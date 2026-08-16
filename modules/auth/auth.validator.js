@@ -18,7 +18,7 @@ export const loginSchema = z.object({
     body: z.object({
         username: z.string().trim().optional(),
         email: z.string().trim().email("Email is provided in an invalid format").optional(),
-        password: z.string().min(1, "Password is required")
+        password: z.string({ required_error: "Password is required" }).min(8, "Password must be atleast 8 characters long")
     }).refine(
         (data) => {
             const hasUsername = data.username !== undefined && data.username.length > 0;

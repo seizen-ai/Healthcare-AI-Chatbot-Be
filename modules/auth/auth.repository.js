@@ -4,7 +4,7 @@ import { EMAIL_VERIFICATION_EXPIRY_MS, TOKEN_PURPOSES } from "./auth.token.const
 
 class authRepository {
 
-    async createUserOrUpdate(email, updateData) {
+    createUserOrUpdate(email, updateData) {
         return User.findOneAndUpdate(
             { email },
             { $set: updateData }, 
@@ -16,7 +16,7 @@ class authRepository {
         );
     }
 
-    async findByEmailOrUsername(data) {
+    findByEmailOrUsername(data) {
         return User.findOne({
             $or: [
                 { email: data.email },
@@ -25,22 +25,23 @@ class authRepository {
         });
     }
         
-    async findUserById(userId) {
+    findUserById(userId) {
         return User.findById(userId);
     }
     
-    async findTokenByHash(tokenHash){
+    findTokenByHash(tokenHash){
         return RefreshToken.findOne({ tokenHash })
     }
-    async findTokenAndUpdate(query, work, options){
+    findTokenAndUpdate(query, work, options){
          return RefreshToken.findOneAndUpdate(query, work, options);
     }
-    async markTokenAsUsed(tokenId) {
+
+    markTokenAsUsed(tokenId) {
         AuthToken.findOneAndUpdate({ _id : tokenId }, { used : true });
         return;
     }
 
-    async createEmailVerificationToken(userId, tokenHash) {
+    createEmailVerificationToken(userId, tokenHash) {
         return AuthToken.create({
             userId,
             tokenHash,
@@ -49,7 +50,7 @@ class authRepository {
         });
     }
 
-    async findActiveToken({ tokenHash, purpose }) {
+    findActiveToken({ tokenHash, purpose }) {
         return AuthToken.findOne({
             tokenHash,
             purpose,
@@ -60,15 +61,15 @@ class authRepository {
 
     
 
-    async markUserEmailAsVerified(userId) {
+    markUserEmailAsVerified(userId) {
         return User.findByIdAndUpdate(userId, { isVerfied: true });
     }
 
-    async findRefreshTokenAndDelete(tokenHash){
+    findRefreshTokenAndDelete(tokenHash){
         return RefreshToken.findOneAndDelete({ tokenHash });
     }
 
-    async deleteManyRefreshToken(userId){
+    deleteManyRefreshToken(userId){
         RefreshToken.deleteMany({ userId });
         return;
     }
