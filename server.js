@@ -47,6 +47,7 @@ app.get('/health', async (req, res) => {
         });
     }
 });
+
 // request initialization.
 app.use('/api/auth', authRouter);
 app.use('/api/hospital', hospitalRouter);
@@ -54,7 +55,7 @@ app.use('/api/hospital', hospitalRouter);
 
 app.use(globalErrorHandler);
 const startServer = async () => {
-    try{
+    try {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Booting up the server...');
         console.log('Database connected sucessfully.');
@@ -65,14 +66,14 @@ const startServer = async () => {
         }, { label: "Kafka", retries: 10, delayMs: 3000 });
         //Check the redis connection 
         checkRedisConnection();
-        
+
 
         await startNotificationService();
 
         app.listen(PORT, () => {
             console.log(`Server Started Successfully on PORT : ${PORT}`);
         });
-    }catch(error){
+    } catch (error) {
         console.log('There is some problem booting the server: ', error.message);
         process.exit(0);
     }

@@ -65,7 +65,7 @@ const hospitalSchema = new mongoose.Schema(
       },
     },
 
-    
+
     address: {
       street: {
         type: String,
@@ -159,7 +159,7 @@ const hospitalSchema = new mongoose.Schema(
 
 
 
-hospitalSchema.index({ ownerId: 1, status: 1, createdAt: -1});//Optimized index and it'll make our query lightning-fast !!!!
+hospitalSchema.index({ ownerId: 1, status: 1, createdAt: -1 });//Optimized index and it'll make our query lightning-fast !!!!
 
 
 hospitalSchema.index(
