@@ -4,15 +4,26 @@ import mongoose from 'mongoose';
 import mongoSanitize from 'express-mongo-sanitize';
 import 'dotenv/config';
 import { globalErrorHandler } from './middlewares/ErrorMiddleware.js';
-import kafkaProducer from './kafka/producer/kafka.producer.js';
 import cookieParser from 'cookie-parser';
+
+//Kafka imports
+import kafkaProducer from './kafka/producer/kafka.producer.js';
 import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
 import { retryOperation } from './kafka/utils/kafka.retry.js';
 import { startNotificationService } from './modules/notification/notification.bootstrap.js';
+
+//Redis imports
 import { checkRedisConnection } from './redis/bootstrap/redis.bootstrap.js';
+import { redisClient } from './redis/index.js';
+
 //Routers
 import authRouter from './modules/auth/auth.routes.js';
 import hospitalRouter from './modules/hospital/hospital.routes.js';
+
+//Rate limiter
+import { rateLimiter } from './middlewares/rateLimter.js';
+
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,27 +60,33 @@ app.get('/health', async (req, res) => {
 });
 
 // request initialization.
-app.use('/api/auth', authRouter);
-app.use('/api/hospital', hospitalRouter);
+app.use('/api/auth', rateLimiter({ routeName: "Authentication", windowSec: 900, requests: 10 }), authRouter);
+app.use('/api/hospital', rateLimiter({ routeName: "Hospital", windowSec: 3600, requests: 100 }), hospitalRouter);
 
 
 app.use(globalErrorHandler);
 const startServer = async () => {
     try {
+        //DB Connection
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Booting up the server...');
         console.log('Database connected sucessfully.');
 
+        //Kafka Startup Sequence
         await retryOperation(async () => {
             await ensureKafkaTopics();
             await kafkaProducer.connect();
         }, { label: "Kafka", retries: 10, delayMs: 3000 });
-        //Check the redis connection 
-        checkRedisConnection();
 
 
+
+        //Redis Connection Check
+        checkRedisConnection(redisClient);
+
+        //Start Notification Service
         await startNotificationService();
 
+        //Start Server
         app.listen(PORT, () => {
             console.log(`Server Started Successfully on PORT : ${PORT}`);
         });

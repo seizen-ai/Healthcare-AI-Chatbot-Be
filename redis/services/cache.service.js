@@ -1,31 +1,45 @@
-import redisClient from '../client/redis.client.js';
+class CacheService {
+  constructor(redisClient) {
+    this.client = redisClient;
+  }
 
-export class CacheService {
-  
-  // Generic getter that automatically parses JSON
-  static async get(key) {
-    const data = await redisClient.get(key);
+  async get(key) {
+    const data = await this.client.get(key);
     if (!data) return null;
-    
+
     try {
       return JSON.parse(data);
     } catch (e) {
-      return data; // Return as plain string if it's not JSON
+      return data;
     }
   }
 
-  // Generic setter that automatically stringifies objects
-  static async set(key, value, ttlSeconds) {
+
+  async set(key, value, ttlSeconds) {
     const stringValue = typeof value === 'object' ? JSON.stringify(value) : value;
-    
+
     if (ttlSeconds) {
-      await redisClient.set(key, stringValue, 'EX', ttlSeconds);
+      await this.client.set(key, stringValue, 'EX', ttlSeconds);
     } else {
-      await redisClient.set(key, stringValue);
+      await this.client.set(key, stringValue);
     }
   }
 
-  static async delete(key) {
-    await redisClient.del(key);
+  async incr(key) {
+    if (!key) return;
+    return await this.client.incr(key);
+  }
+
+  async delete(key) {
+    if (!key) return;
+    await this.client.del(key);
+  }
+
+  async expire(key, windowSeconds) {
+    if (!key) return;
+    await this.client.expire(key, windowSeconds);
   }
 }
+
+
+export default CacheService;

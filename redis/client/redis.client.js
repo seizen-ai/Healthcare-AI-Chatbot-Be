@@ -1,14 +1,14 @@
 import Redis from 'ioredis';
-import { redisConfig } from '../config/redis.config.js';
+import redisConfig from '../config/redis.config.js';
 
 let instance = null;
 
-const getRedisClient = () => {
+const getRedisClient = (redisConfig) => {
   if (!instance) {
     instance = new Redis({
       host: redisConfig.host,
       port: redisConfig.port,
-      password: redisConfig.password,
+      password: redisConfig.password,//Only in production and is ignored during development for flexibility
       keyPrefix: redisConfig.keyPrefix,
       maxRetriesPerRequest: 3,
     });
@@ -20,4 +20,4 @@ const getRedisClient = () => {
 };
 
 
-export default getRedisClient();
+export default getRedisClient;

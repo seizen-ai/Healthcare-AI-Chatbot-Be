@@ -9,52 +9,53 @@ import { generateVerificationToken, hashVerificationToken } from "../../utils/ge
 import { generateAuthTokens } from '../../utils/generateAuthTokens.js';
 import { getTokenHash } from "../../utils/getTokenHash.js";
 import { isValidJwt } from "../../utils/generateAuthTokens.js";
-import { CacheService } from "../../redis/services/cache.service.js";
 import { REDIS_KEYS } from "../../redis/constants/redis.constants.js";
+import { cacheService } from "../../redis/index.js";
 
 const buildEmailVerificationLink = (rawToken) => {
     const apiBaseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`;
     return `${apiBaseUrl}/verify-email/${rawToken}`;
 };
 
+
 class authService {
 
-  
+
     async signup(data) {
         const { username, email, password } = data;
 
         const existingUser = await authRepository.findByEmailOrUsername({ username, email });
 
         if (existingUser) {
-           
+
             if (existingUser.email === email && existingUser.isVerfied) {
                 throw new AppError("This email is already registered. Please login.", 400);
             }
 
-        
+
             if (existingUser.username === username) {
                 if (existingUser.isVerfied) {
                     throw new AppError("Username is not available.", 400);
                 }
-            
+
                 if (existingUser.email !== email) {
                     throw new AppError("Username is currently reserved. Please try another.", 400);
                 }
             }
         }
-    
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
 
-        
+
         const newUser = await authRepository.createUserOrUpdate(email, {
             username,
             password: hashedPassword,
-            isVerfied: false 
+            isVerfied: false
         });
 
-        
+
 
         const { rawToken, tokenHash } = generateVerificationToken();
 
@@ -106,61 +107,61 @@ class authService {
         };
     }
 
-    async login(data){
+    async login(data) {
         const { email, password, username, cookie } = data;
         const user = await authRepository.findByEmailOrUsername({
             username,
             email
         });
 
-        if(!user) throw new AppError('There is no user associated with this credentials.', 400);
-        if(!user.isVerfied) throw new AppError('Please verify your email to perform this action.', 400);
+        if (!user) throw new AppError('There is no user associated with this credentials.', 400);
+        if (!user.isVerfied) throw new AppError('Please verify your email to perform this action.', 400);
 
         const isValid = await bcrypt.compare(password, user.password);
-        if(!isValid) throw new AppError('Incorrect credentials, Please check the credentials and try again.', 400);
+        if (!isValid) throw new AppError('Incorrect credentials, Please check the credentials and try again.', 400);
 
 
         const accessToken = await generateAuthTokens(user, cookie);
 
         return {
-            message : 'Login Successful',
+            message: 'Login Successful',
             accessToken,
         }
     }
 
     async logout(refreshToken, accessToken) {
-    
 
-    if(refreshToken){
-        const tokenHash = getTokenHash(refreshToken);
-        await authRepository.findRefreshTokenAndDelete(tokenHash);
-    }
-   
 
-    //Blacklist the token in the centralized redis cache if it's valid and not expired at the current point of time
-    if(accessToken){
-        const decoded = isValidJwt(accessToken);
-
-        if(!decoded) return;
-
-        //But if jwt is valid then extract the jwtid from the token and mark it as blacklisted in the centralized redis cache
-        const jwtid = decoded.jwtid;
-        const currentTimeInSeconds = Math.floor(Date.now() / 1000);
-        const secondsLeft = decoded.exp - currentTimeInSeconds;
-        
-        const EXPIRE_TIME =  Math.max(0, secondsLeft);
-
-        if (EXPIRE_TIME > 0) {
-            // Use the reusable CacheService instead of the raw redisClient
-            await CacheService.set(
-                REDIS_KEYS.BLACKLISTED_TOKEN(jwtid), 
-                'blacklisted', // Storing a simple string flag
-                EXPIRE_TIME
-            );
+        if (refreshToken) {
+            const tokenHash = getTokenHash(refreshToken);
+            await authRepository.findRefreshTokenAndDelete(tokenHash);
         }
-    }
 
-    return;
+
+        //Blacklist the token in the centralized redis cache if it's valid and not expired at the current point of time
+        if (accessToken) {
+            const decoded = isValidJwt(accessToken);
+
+            if (!decoded) return;
+
+            //But if jwt is valid then extract the jwtid from the token and mark it as blacklisted in the centralized redis cache
+            const jwtid = decoded.jwtid;
+            const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+            const secondsLeft = decoded.exp - currentTimeInSeconds;
+
+            const EXPIRE_TIME = Math.max(0, secondsLeft);
+
+            if (EXPIRE_TIME > 0) {
+                // Use the reusable CacheService instead of the raw redisClient
+                await cacheService.set(
+                    REDIS_KEYS.BLACKLISTED_TOKEN(jwtid),
+                    'blacklisted', // Storing a simple string flag
+                    EXPIRE_TIME
+                );
+            }
+        }
+
+        return;
     }
 
     async refresh(data) {
@@ -176,26 +177,26 @@ class authService {
 
         //Check if exists and it's not used, then mark as used immediately (Atomic operation)
         const tokenDoc = await authRepository.findTokenAndUpdate(
-            { tokenHash: tokenHash, used: false }, 
-            { $set: { used: true } }, 
-            { new: true } 
+            { tokenHash: tokenHash, used: false },
+            { $set: { used: true } },
+            { new: true }
         );
 
         //Handle invalid or reused token
         if (!tokenDoc) {
             const reusedToken = await authRepository.findTokenByHash({ tokenHash });
-            
+
             //Token reuse detected -> revoke all sessions for this user for their safety -> safety/security > UX
             if (reusedToken && reusedToken.used === true) {
                 await authRepository.deleteManyRefreshToken({ userId: reusedToken.userId });
-                
+
                 clearCookie('refreshToken', {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'strict',
-                    signed: true 
+                    signed: true
                 });
-                
+
                 throw new AppError('Security Alert: Suspicious session detected. All devices logged out.', 403);
             }
 
@@ -210,12 +211,12 @@ class authService {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'strict',
-                signed: true 
+                signed: true
             });
             throw new AppError('Cannot generate auth tokens for inactive user.', 404);
         }
 
-        
+
         const accessToken = await generateAuthTokens(user, cookie, tokenDoc);
 
         return accessToken;
