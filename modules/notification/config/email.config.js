@@ -12,23 +12,13 @@ const emailConfig = {
         address: getFromAddress()
     },
 
-    transport: isProduction
-        ? {
-            host: process.env.SMTP_HOST || "smtp.sendgrid.net",
-            port: Number(process.env.SMTP_PORT) || 2525,
-            secure: process.env.SMTP_SECURE === "true",
-            auth: {
-                user: process.env.SMTP_USER || "apikey",
-                pass: process.env.SENDGRID_API_KEY || process.env.SMTP_PASS
-            }
+    transport: {
+        service: process.env.SMTP_SERVICE || "gmail",
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
         }
-        : {
-            service: process.env.SMTP_SERVICE || "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        }
+    }
 };
 
 export default emailConfig;
