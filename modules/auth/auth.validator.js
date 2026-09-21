@@ -23,12 +23,62 @@ export const loginSchema = z.object({
         (data) => {
             const hasUsername = data.username !== undefined && data.username.length > 0;
             const hasEmail = data.email !== undefined && data.email.length > 0;
-            
+
             return hasUsername || hasEmail;
         },
         {
             message: "Either username or email is required",
-            path: ["username"], 
+            path: ["username"],
+        }
+    )
+});
+
+export const forgetPasswordSchema = z.object({
+    body: z.object({
+        username: z.string().trim().min(1, "Username cannot be empty").optional(),
+        email: z.string().trim().email("Email is provided in an invalid format").optional(),
+    })
+        .refine(
+            (data) => {
+                const hasUsername = !!data.username;
+                const hasEmail = !!data.email;
+                return hasUsername || hasEmail;
+            },
+            {
+                message: "Please provide either a username or an email address",
+                path: ["username"],
+            }
+        )
+
+        .refine(
+            (data) => {
+                const hasUsername = !!data.username;
+                const hasEmail = !!data.email;
+                return !(hasUsername && hasEmail);
+            },
+            {
+                message: "Provide either a username or an email, not both",
+                path: ["username"],
+            }
+        )
+});
+
+export const resetPasswordSchema = z.object({
+    params: z.object({
+        token: z.string().min(1, "Reset token is required")
+    }),
+    body: z.object({
+        newPassword: z
+            .string()
+            .min(8, "Password must be at least 8 characters long")
+            .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+            .regex(/[0-9]/, "Password must contain at least one number"),
+        confirmPassword: z.string().min(1, "Please confirm your password")
+    }).refine(
+        (data) => data.newPassword === data.confirmPassword,
+        {
+            message: "Passwords do not match",
+            path: ["confirmPassword"]
         }
     )
 });

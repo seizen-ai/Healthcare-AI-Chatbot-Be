@@ -11,6 +11,7 @@ import kafkaProducer from './kafka/producer/kafka.producer.js';
 import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
 import { retryOperation } from './kafka/utils/kafka.retry.js';
 import { startNotificationService } from './modules/notification/notification.bootstrap.js';
+import { startCrawlerService } from './modules/crawler/crawler.bootstrap.js';
 
 //Redis imports
 import { checkRedisConnection } from './redis/bootstrap/redis.bootstrap.js';
@@ -34,7 +35,7 @@ app.use(cors({
     origin: 'http://localhost:5173', // Must match your Vite frontend URL exactly
     credentials: true,               // Crucial for sending/receiving httpOnly cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-idempotency-key']
 }));
 app.use(mongoSanitize());//To prevent noSQL injection attacks
 app.use(express.json());//json package opener
@@ -60,8 +61,9 @@ app.get('/health', async (req, res) => {
 });
 
 // request initialization.
-app.use('/api/auth', rateLimiter({ routeName: "Authentication", windowSec: 900, requests: 10 }), authRouter);
-app.use('/api/hospital', rateLimiter({ routeName: "Hospital", windowSec: 3600, requests: 100 }), hospitalRouter);
+// app.use('/api/auth', rateLimiter({ routeName: "Authentication", windowSec: 900, requests: 10 }), authRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/hospital', hospitalRouter);
 
 
 app.use(globalErrorHandler);
@@ -85,6 +87,9 @@ const startServer = async () => {
 
         //Start Notification Service
         await startNotificationService();
+
+        //Start Crawler Service
+        await startCrawlerService();
 
         //Start Server
         app.listen(PORT, () => {

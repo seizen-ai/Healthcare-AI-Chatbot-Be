@@ -1,6 +1,5 @@
-import authService  from "./auth.service.js";
+import authService from "./auth.service.js";
 import { catchAsync } from "../../utils/CatchAsync.js";
-import { ca } from "zod/v4/locales";
 
 
 
@@ -18,10 +17,10 @@ export const verifyEmail = catchAsync(async (req, res) => {
 
 export const login = catchAsync(async (req, res) => {
     const data = {
-        username : req.body.username,
-        email : req.body.email,
-        password : req.body.password,
-        cookie : res.cookie.bind(res)
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+        cookie: res.cookie.bind(res)
     }
     const result = await authService.login(data);
 
@@ -35,25 +34,25 @@ export const login = catchAsync(async (req, res) => {
 //and do not nuke all the sessions just nuke the current device -> current session
 export const logout = catchAsync(async (req, res) => {
     const refreshToken = req.signedCookies?.refreshToken;
-    const accessToken =  req.headers.authorization?.split(' ')[1];
+    const accessToken = req.headers.authorization?.split(' ')[1];
 
-   
-    
+
+
     await authService.logout(refreshToken, accessToken);
 
 
 
     res.clearCookie('refreshToken', {
-        httpOnly : true,
-        secure : process.env.NODE_ENV === 'production',
-        sameSite : 'strict',
-        signed : true
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        signed: true
     });
 
-    
-    
 
-    return res.status(200).json({ message : 'Logout Successful' });
+
+
+    return res.status(200).json({ message: 'Logout Successful' });
 });
 
 
@@ -72,4 +71,22 @@ export const refresh = catchAsync(async (req, res) => {
         message: 'Session Refresh Successful',
         accessToken
     });
+});
+
+export const forgetPassword = catchAsync(async (req, res) => {
+    let data;
+    if (req.body.username) data = { username: req.body.username }
+    if (req.body.email) data = { email: req.body.email }
+    const result = await authService.forgetPassword(data);
+
+    return res.status(200).json(result);
+});
+
+export const resetPassword = catchAsync(async (req, res) => {
+    const result = await authService.resetPassword({
+        rawToken: req.params.token,
+        newPassword: req.body.newPassword
+    });
+
+    return res.status(200).json(result);
 });

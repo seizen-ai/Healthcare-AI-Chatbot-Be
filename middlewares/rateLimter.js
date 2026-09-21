@@ -12,10 +12,10 @@ export const rateLimiter = ({ routeName, windowSec, requests }) => {
         const val = await cacheService.incr(key);
 
 
-
         if (val === 1) {
             await cacheService.expire(key, windowSec);
         }
+
 
         if (val > requests) {
             throw new AppError('Too Many Requests, Please Try Again Later.', 429);

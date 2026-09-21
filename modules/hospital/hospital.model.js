@@ -120,6 +120,7 @@ const hospitalSchema = new mongoose.Schema(
           "bot_configured",
           "knowledge_processing",
           "knowledge_ready",
+          "crawler_failed",
           "completed",
         ],
         default: "hospital_created",
@@ -150,6 +151,10 @@ const hospitalSchema = new mongoose.Schema(
       maxlength: 500,
       default: null,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true,

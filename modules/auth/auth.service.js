@@ -11,21 +11,89 @@ import { getTokenHash } from "../../utils/getTokenHash.js";
 import { isValidJwt } from "../../utils/generateAuthTokens.js";
 import { REDIS_KEYS } from "../../redis/constants/redis.constants.js";
 import { cacheService } from "../../redis/index.js";
+import { ENDPOINTS } from "./auth.endpoints.js";
 
-const buildEmailVerificationLink = (rawToken) => {
+import { PASSWORD_RESET_EXPIRY_MS, EMAIL_VERIFICATION_EXPIRY_MS } from "./auth.token.constants.js";
+
+const buildLink = (rawToken, endpoint) => {
     const apiBaseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`;
-    return `${apiBaseUrl}/verify-email/${rawToken}`;
+    return `${apiBaseUrl}/${endpoint}/${rawToken}`;
 };
+
+
 
 
 class authService {
 
+    async forgetPassword(data) {
+        const user = await authRepository.findUser(data);
 
+        // Security: return same message regardless of whether user exists or is verified
+        // This prevents user enumeration attacks
+        if (!user || !user.isVerfied) {
+            return { message: 'If an account exists with these credentials, a password reset email will be sent.' };
+        }
+
+        // Invalidate any previous unused reset tokens before issuing a fresh one
+        await authRepository.invalidatePreviousTokens(user._id, TOKEN_PURPOSES.PASSWORD_RESET);
+
+        const { rawToken, tokenHash } = generateVerificationToken();
+        const payload = {
+            userId: user._id,
+            tokenHash,
+            purpose: TOKEN_PURPOSES.PASSWORD_RESET,
+            expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS)
+        };
+
+        await authRepository.createAuthToken(payload);
+        const resetLink = buildLink(rawToken, ENDPOINTS.RESET_PASSWORD);
+
+        await kafkaProducer.publish(KAFKA_TOPICS.SEND_EMAIL, {
+            type: EMAIL_TYPES.PASSWORD_RESET,
+            to: user.email,
+            data: {
+                username: user.username,
+                resetLink
+            }
+        });
+
+        return { message: 'If an account exists with these credentials, a password reset email will be sent.' };
+    }
+
+    async resetPassword({ rawToken, newPassword }) {
+        const tokenHash = hashVerificationToken(rawToken);
+
+        // Atomically find a valid, unused, non‑expired reset token and mark it used
+        const tokenDoc = await authRepository.findActiveTokenAndMarkUsed({
+            tokenHash,
+            purpose: TOKEN_PURPOSES.PASSWORD_RESET
+        });
+
+        if (!tokenDoc) {
+            throw new AppError('Invalid or expired password reset link. Please request a new one.', 400);
+        }
+
+        const user = await authRepository.findUserById(tokenDoc.userId);
+        if (!user) {
+            throw new AppError('User account not found.', 404);
+        }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password and invalidate any other unused reset tokens for this user
+        await Promise.all([
+            authRepository.updateUserPassword(user._id, hashedPassword),
+            authRepository.invalidatePreviousTokens(user._id, TOKEN_PURPOSES.PASSWORD_RESET)
+        ]);
+
+        return { message: 'Password reset successful. You can now log in with your new password.' };
+    }
     async signup(data) {
         const { username, email, password } = data;
 
         const existingUser = await authRepository.findByEmailOrUsername({ username, email });
-
         if (existingUser) {
 
             if (existingUser.email === email && existingUser.isVerfied) {
@@ -58,10 +126,15 @@ class authService {
 
 
         const { rawToken, tokenHash } = generateVerificationToken();
+        const payload = {
+            userId: newUser._id,
+            tokenHash,
+            purpose: TOKEN_PURPOSES.EMAIL_VERIFICATION,
+            expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS)
+        }
+        await authRepository.createAuthToken(payload);
 
-        await authRepository.createEmailVerificationToken(newUser._id, tokenHash);
-
-        const verificationLink = buildEmailVerificationLink(rawToken);
+        const verificationLink = buildLink(rawToken, ENDPOINTS.VERIFY_EMAIL);
 
         await kafkaProducer.publish(KAFKA_TOPICS.SEND_EMAIL, {
             type: EMAIL_TYPES.EMAIL_VERIFICATION,
@@ -145,7 +218,7 @@ class authService {
             if (!decoded) return;
 
             //But if jwt is valid then extract the jwtid from the token and mark it as blacklisted in the centralized redis cache
-            const jwtid = decoded.jwtid;
+            const jwtid = decoded.jti;
             const currentTimeInSeconds = Math.floor(Date.now() / 1000);
             const secondsLeft = decoded.exp - currentTimeInSeconds;
 
@@ -156,7 +229,7 @@ class authService {
                 await cacheService.set(
                     REDIS_KEYS.BLACKLISTED_TOKEN(jwtid),
                     'blacklisted', // Storing a simple string flag
-                    EXPIRE_TIME
+                    { ttlSeconds: EXPIRE_TIME }
                 );
             }
         }

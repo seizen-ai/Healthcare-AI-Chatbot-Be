@@ -13,10 +13,10 @@ export const verifyToken = catchAsync(async (req, res, next) => {
     if (!decoded) throw new AppError('Error : Invalid or expired token', 401);
 
     //Now check if jwt token jwtid is blacklisted in redis then just reject this request
-    const jwtid = decoded.jwtid;
+    const jwtid = decoded.jti;
     const blacklisted = await cacheService.get(REDIS_KEYS.BLACKLISTED_TOKEN(jwtid));
 
-    if (blacklisted) throw new AppError('Session Expired : token has been logged out', 401);
+    if (blacklisted) throw new AppError('Session Expired : User has been logged out', 401);
 
     req.user = decoded;
 

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { TOKEN_PURPOSES } from "./auth.token.constants.js";
 
+
 const authTokenSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -35,27 +36,50 @@ export const AuthToken = mongoose.model("AuthToken", authTokenSchema);
 
 
 const refreshTokenSchema = mongoose.Schema({
-    userId : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'User',
-        required : true
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
-    tokenHash : {
-        type : String,
-        required : true,
-        unique : true
+    tokenHash: {
+        type: String,
+        required: true,
+        unique: true
     },
-    expiresAt : {
-        type : Date,
-        required : true
+    expiresAt: {
+        type: Date,
+        required: true
     },
-    used : {
-      type : Boolean,
-      default : false
+    used: {
+        type: Boolean,
+        default: false
     }
 });
 
-refreshTokenSchema.index({expiresAt : 1}, {expireAfterSeconds : 0});
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const RefreshToken = mongoose.model('RefreshToken',refreshTokenSchema);
+export const RefreshToken = mongoose.model('RefreshToken', refreshTokenSchema);
+
+
+// const genricToken = new mongoose.Schema({
+//     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+//     tokenType: { type: String, required: true },
+//     tokenHash: {
+//         type: String,
+//         required: true,
+//         unique: true
+//     },
+//     expiresAt: {
+//         type: Date,
+//         required: true
+//     },
+//     used: {
+//         type: Boolean,
+//         default: false
+//     }
+// });
+
+// genricToken.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// export const GenericToken = mongoose.model('GenricToken', genricToken);
 

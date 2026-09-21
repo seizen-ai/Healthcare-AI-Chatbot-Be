@@ -15,14 +15,36 @@ class CacheService {
   }
 
 
-  async set(key, value, ttlSeconds) {
-    const stringValue = typeof value === 'object' ? JSON.stringify(value) : value;
+  async set(key, value, options = {}) {
+    if (key === undefined || key === null) {
+      throw new Error('cacheService.set: "key" is required.');
+    }
+
+    const { ttlSeconds, keepTtl = false } = options;
+
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+
+    const args = [key, stringValue];
 
     if (ttlSeconds) {
-      await this.client.set(key, stringValue, 'EX', ttlSeconds);
-    } else {
-      await this.client.set(key, stringValue);
+      args.push('EX', ttlSeconds);
+    } else if (keepTtl) {
+      args.push('KEEPTTL');
     }
+
+    return this.client.set(...args);
+  }
+
+  async setnx(key, value, ttlSeconds) {
+    const stringValue = typeof value === 'object' ? JSON.stringify(value) : value;
+
+
+    const args = [key, stringValue, 'NX'];
+    if (ttlSeconds) args.push('EX', ttlSeconds);
+
+
+    const result = await this.client.set(...args);
+    return result === 'OK';
   }
 
   async incr(key) {
@@ -38,6 +60,12 @@ class CacheService {
   async expire(key, windowSeconds) {
     if (!key) return;
     await this.client.expire(key, windowSeconds);
+  }
+
+  // Get remaining TTL (in seconds) for a key
+  async ttl(key) {
+    if (!key) return null;
+    return await this.client.ttl(key);
   }
 }
 

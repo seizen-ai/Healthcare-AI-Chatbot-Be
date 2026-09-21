@@ -1,34 +1,19 @@
-# -----------------------------
-# Base Image
-# -----------------------------
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 
-# -----------------------------
-# Set Working Directory
-# -----------------------------
 WORKDIR /app
 
-# -----------------------------
-# Copy Dependency Files
-# -----------------------------
 COPY package*.json ./
 
-# -----------------------------
-# Install Dependencies
-# -----------------------------
 RUN npm install
 
-# -----------------------------
-# Copy Application Source Code
-# -----------------------------
+RUN npx playwright install --with-deps chromium
+
+COPY scripts/download-models.mjs ./scripts/
+
+RUN node scripts/download-models.mjs
+
 COPY . .
 
-# -----------------------------
-# Expose Backend Port
-# -----------------------------
 EXPOSE 5000
 
-# -----------------------------
-# Start the Server
-# -----------------------------
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev"]
