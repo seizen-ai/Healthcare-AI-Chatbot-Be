@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 5000;
 app.set('case sensitive routing', true);
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors({
-    origin: 'http://localhost:5173', // Must match your Vite frontend URL exactly
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Must match your Vite frontend URL exactly
     credentials: true,               // Crucial for sending/receiving httpOnly cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-idempotency-key']
@@ -70,9 +70,12 @@ app.use(globalErrorHandler);
 const startServer = async () => {
     try {
         //DB Connection
-        await mongoose.connect(process.env.MONGO_URI);
+        const mongoUri = process.env.NODE_ENV === 'production'
+            ? (process.env.PROD_MONGO_URI)
+            : (process.env.DEV_MONGO_URI);
+        await mongoose.connect(mongoUri);
         console.log('Booting up the server...');
-        console.log('Database connected sucessfully.');
+        console.log(`Database connected successfully [NODE_ENV=${process.env.NODE_ENV || 'development'}].`);
 
         //Kafka Startup Sequence
         await retryOperation(async () => {

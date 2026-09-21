@@ -3,18 +3,22 @@ import redisConfig from '../config/redis.config.js';
 
 let instance = null;
 
-const getRedisClient = (redisConfig) => {
-  if (!instance) {
-    instance = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,//Only in production and is ignored during development for flexibility
-      keyPrefix: redisConfig.keyPrefix,
-      maxRetriesPerRequest: 3,
-    });
+const getRedisClient = (config = redisConfig) => {
 
-    instance.on('error', (err) => console.error('Redis Client Error', err));
-    instance.on('connect', () => console.log('Redis Client Connected'));
+  if (!instance) {
+    const clientOptions = {
+      host: config.host,
+      port: config.port,
+      password: config.password,
+      keyPrefix: config.keyPrefix,
+      maxRetriesPerRequest: config.maxRetriesPerRequest ?? 3,
+      ...(config.tls ? { tls: config.tls } : {}),
+    };
+
+    instance = new Redis(clientOptions);
+
+    instance.on('error', (err) => console.error(`[Redis] Error (${config.host}:${config.port}):`, err.message));
+    instance.on('connect', () => console.log(`[Redis] Connected successfully to ${config.host}:${config.port} [NODE_ENV=${process.env.NODE_ENV || 'development'}]`));
   }
   return instance;
 };
