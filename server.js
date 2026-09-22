@@ -12,6 +12,7 @@ import { ensureKafkaTopics } from './kafka/admin/kafka.admin.js';
 import { retryOperation } from './kafka/utils/kafka.retry.js';
 import { startNotificationService } from './modules/notification/notification.bootstrap.js';
 import { startCrawlerService } from './modules/crawler/crawler.bootstrap.js';
+import { startKeepAliveCron } from './utils/cron.js';
 
 //Redis imports
 import { checkRedisConnection } from './redis/bootstrap/redis.bootstrap.js';
@@ -94,12 +95,15 @@ const startServer = async () => {
         //Start Crawler Service
         await startCrawlerService();
 
+        //Start Keep-Alive Cron
+        startKeepAliveCron();
+
         //Start Server
         app.listen(PORT, () => {
             console.log(`Server Started Successfully on PORT : ${PORT}`);
         });
     } catch (error) {
-        console.log('There is some problem booting the server: ', error.message);
+        console.log('There is some problem booting the server: ', error);
         process.exit(0);
     }
 };

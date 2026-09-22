@@ -8,7 +8,9 @@ export const startNotificationService = async () => {
     );
 
     if (hasSmtpCredentials) {
-        await emailTransporter.verifyConnection();
+        emailTransporter.verifyConnection().catch(error => {
+            console.error("Failed to verify SMTP connection. Emails might not send:", error.message);
+        });
     } else {
         console.warn("Email credentials are not configured. Emails will not be sent until SMTP is set up.");
     }
