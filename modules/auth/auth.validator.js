@@ -23,32 +23,8 @@ export const loginSchema = z.object({
 
 export const forgetPasswordSchema = z.object({
     body: z.object({
-        username: z.string().trim().min(1, "Username cannot be empty").optional(),
-        email: z.string().trim().email("Email is provided in an invalid format").optional(),
+        identifier: z.string({ required_error: "Identifier is required" }).trim()
     })
-        .refine(
-            (data) => {
-                const hasUsername = !!data.username;
-                const hasEmail = !!data.email;
-                return hasUsername || hasEmail;
-            },
-            {
-                message: "Please provide either a username or an email address",
-                path: ["username"],
-            }
-        )
-
-        .refine(
-            (data) => {
-                const hasUsername = !!data.username;
-                const hasEmail = !!data.email;
-                return !(hasUsername && hasEmail);
-            },
-            {
-                message: "Provide either a username or an email, not both",
-                path: ["username"],
-            }
-        )
 });
 
 export const resetPasswordSchema = z.object({

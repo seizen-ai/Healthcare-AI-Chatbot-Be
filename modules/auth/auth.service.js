@@ -25,8 +25,8 @@ const buildLink = (rawToken, endpoint) => {
 
 class authService {
 
-    async forgetPassword(data) {
-        const user = await authRepository.findUser(data);
+    async forgetPassword(identifier) {
+        const user = await authRepository.findByEmailOrUsername(identifier);
 
         // Security: return same message regardless of whether user exists or is verified
         // This prevents user enumeration attacks
