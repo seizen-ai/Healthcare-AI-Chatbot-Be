@@ -25,11 +25,11 @@ class authRepository {
     //     });
     // }
 
-    findByEmailOrUsername(data) {
+    findByEmailOrUsername(identifier) {
         return User.findOne({
             $or: [
-                { email: data.email },
-                { username: data.username }
+                { email: identifier },
+                { username: identifier }
             ]
         });
     }

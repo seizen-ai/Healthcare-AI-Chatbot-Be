@@ -16,21 +16,9 @@ export const verifyEmailSchema = z.object({
 
 export const loginSchema = z.object({
     body: z.object({
-        username: z.string().trim().optional(),
-        email: z.string().trim().email("Email is provided in an invalid format").optional(),
+        identifier: z.string({ required_error: 'Either Email or Username Identifier is Required' }).trim(),
         password: z.string({ required_error: "Password is required" }).min(8, "Password must be atleast 8 characters long")
-    }).refine(
-        (data) => {
-            const hasUsername = data.username !== undefined && data.username.length > 0;
-            const hasEmail = data.email !== undefined && data.email.length > 0;
-
-            return hasUsername || hasEmail;
-        },
-        {
-            message: "Either username or email is required",
-            path: ["username"],
-        }
-    )
+    })
 });
 
 export const forgetPasswordSchema = z.object({

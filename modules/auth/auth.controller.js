@@ -17,8 +17,7 @@ export const verifyEmail = catchAsync(async (req, res) => {
 
 export const login = catchAsync(async (req, res) => {
     const data = {
-        username: req.body.username,
-        email: req.body.email,
+        identifier: req.body.identifier,
         password: req.body.password,
         cookie: res.cookie.bind(res)
     }

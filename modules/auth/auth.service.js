@@ -181,11 +181,10 @@ class authService {
     }
 
     async login(data) {
-        const { email, password, username, cookie } = data;
-        const user = await authRepository.findByEmailOrUsername({
-            username,
-            email
-        });
+        const { identifier, password, cookie } = data;
+        const user = await authRepository.findByEmailOrUsername(
+            identifier
+        );
 
         if (!user) throw new AppError('There is no user associated with this credentials.', 400);
         if (!user.isVerfied) throw new AppError('Please verify your email to perform this action.', 400);
