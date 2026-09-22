@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
 import emailConfig from "../config/email.config.js";
+
+// Force IPv4 first to fix ENETUNREACH errors on servers with limited IPv6 (like Render)
+dns.setDefaultResultOrder("ipv4first");
 
 class EmailTransporter {
 
