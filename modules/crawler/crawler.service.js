@@ -5,6 +5,8 @@ import { Hospital } from '../hospital/hospital.model.js';
 import { ensureCollection, upsertPoints } from './qdrant.client.js';
 import kafkaProducer from '../../kafka/producer/kafka.producer.js';
 import { KAFKA_TOPICS } from '../../kafka/topics/kafka.topics.js';
+import os from 'os';
+import path from 'path';
 
 const VECTOR_SIZE = 384;
 const MAX_PAGES = 50;
@@ -13,16 +15,32 @@ const CHUNK_SIZE = 500;
 const CHUNK_OVERLAP = 50;
 const EMBED_BATCH_SIZE = 32;
 
+const FASTEMBED_CACHE_DIR = process.env.NODE_ENV === 'production'
+    ? '/root/.cache/fastembed'
+    : path.join(os.tmpdir(), 'fastembed_cache');
+
 let embeddingModel = null;
 
 const getEmbeddingModel = async () => {
     if (!embeddingModel) {
+        console.log(`[Fastembed] Loading model (cacheDir: ${FASTEMBED_CACHE_DIR})...`);
         embeddingModel = await FlagEmbedding.init({
             model: EmbeddingModel.BGESmallENV15,
-            cacheDir: '/root/.cache/fastembed',
+            cacheDir: FASTEMBED_CACHE_DIR,
         });
+        console.log(`[Fastembed] Model loaded. Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     }
     return embeddingModel;
+};
+
+// Pre-load model at import time so it's ready before any crawl request
+export const warmupEmbeddingModel = async () => {
+    try {
+        await getEmbeddingModel();
+        console.log('[Fastembed] Model pre-warmed successfully.');
+    } catch (err) {
+        console.error('[Fastembed] Model warmup failed:', err.message);
+    }
 };
 
 const scrapeWebsite = async (startUrl) => {
@@ -166,6 +184,9 @@ class CrawlerService {
         console.log(`\n[CrawlerService] ▶ Starting pipeline for hospital "${hospitalName}" (${websiteUrl})`);
 
         try {
+            const memLog = () => `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`;
+
+            console.log(`[CrawlerService] Memory before scrape: ${memLog()}`);
             const scrapedPages = await scrapeWebsite(websiteUrl);
 
             if (!scrapedPages.length) {
@@ -173,11 +194,13 @@ class CrawlerService {
             }
 
             const allChunks = scrapedPages.flatMap(({ url, text }) => chunkText(text, url));
-            console.log(`[CrawlerService] Total chunks: ${allChunks.length}`);
+            console.log(`[CrawlerService] Total chunks: ${allChunks.length} | Memory: ${memLog()}`);
 
             const embeddedChunks = await generateEmbeddings(allChunks);
+            console.log(`[CrawlerService] Embeddings done | Memory: ${memLog()}`);
 
             const vectorCount = await storeInQdrant(publicKey, hospitalId, hospitalName, embeddedChunks);
+            console.log(`[CrawlerService] Qdrant done | Memory: ${memLog()}`);
 
             await Hospital.findByIdAndUpdate(hospitalId, {
                 $set: {

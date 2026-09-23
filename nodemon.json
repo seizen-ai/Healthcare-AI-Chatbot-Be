@@ -1,0 +1,11 @@
+{
+    "watch": ["."],
+    "ignore": [
+        "node_modules",
+        ".cache",
+        "*.cache",
+        "/root/.cache",
+        "local_cache"
+    ],
+    "ext": "js,json"
+}
