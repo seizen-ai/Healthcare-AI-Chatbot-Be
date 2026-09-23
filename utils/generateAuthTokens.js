@@ -33,7 +33,7 @@ export const generateAuthTokens = async (user, cookie, oldTokenDoc = null) => {
     cookie('refreshToken', newRefreshTokenString, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
         signed: true,
         maxAge: remainingTimeMs // Browser cookie bhi usi time par expire hogi!
     });
