@@ -24,6 +24,14 @@ class authRepository {
     //         data
     //     });
     // }
+    checkExistingUserForSignup({ username, email }) {
+        return User.findOne({
+            $or: [
+                { email: email },
+                { username: username }
+            ]
+        });
+    }
 
     findByEmailOrUsername(identifier) {
         return User.findOne({

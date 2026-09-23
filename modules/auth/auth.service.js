@@ -93,7 +93,7 @@ class authService {
     async signup(data) {
         const { username, email, password } = data;
 
-        const existingUser = await authRepository.findByEmailOrUsername({ username, email });
+        const existingUser = await authRepository.checkExistingUserForSignup({ username, email });
         if (existingUser) {
 
             if (existingUser.email === email && existingUser.isVerfied) {
