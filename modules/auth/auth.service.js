@@ -265,7 +265,7 @@ class authService {
                 clearCookie('refreshToken', {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
-                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                    sameSite: 'strict',
                     signed: true
                 });
 
@@ -282,7 +282,7 @@ class authService {
             clearCookie('refreshToken', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                sameSite: 'strict',
                 signed: true
             });
             throw new AppError('Cannot generate auth tokens for inactive user.', 404);
