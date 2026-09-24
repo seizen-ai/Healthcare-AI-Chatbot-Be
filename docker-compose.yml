@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: core-service/Dockerfile
 
     container_name: chatbot-backend
 
@@ -12,7 +12,7 @@ services:
       - "5000:5000"
 
     env_file:
-      - .env
+      - core-service/.env
 
     depends_on:
       mongodb:
@@ -52,7 +52,7 @@ services:
       - QDRANT_COLLECTION=hospital_knowledge
 
     env_file:
-      - .env
+      - crawler-service/.env
 
     depends_on:
       kafka:

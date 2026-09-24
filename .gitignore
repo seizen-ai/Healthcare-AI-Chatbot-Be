@@ -10,3 +10,5 @@ coverage/
 .idea/
 
 .DS_Store
+core-service/.env
+crawler-service/.env
