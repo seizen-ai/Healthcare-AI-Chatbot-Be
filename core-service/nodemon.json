@@ -1,0 +1,13 @@
+{
+    "watch": ["."],
+    "ignore": [
+        "node_modules",
+        "crawler-service",
+        ".cache",
+        "*.cache",
+        "/root/.cache",
+        "local_cache",
+        "tests"
+    ],
+    "ext": "js,json"
+}

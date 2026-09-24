@@ -1,0 +1,20 @@
+import { AppError } from "../utils/AppError.js";
+import { catchAsync } from "../utils/CatchAsync.js";
+import { cacheService } from '../../../shared/redis/index.js';
+import { REDIS_KEYS } from '../../../shared/redis/constants/redis.constants.js';
+import jwt from 'jsonwebtoken';
+
+export const verifyToken = catchAsync(async (req, res, next) => {
+    const accessToken = req.headers.authorization?.split(' ')[1];
+    if (!accessToken) throw new AppError('Error : Token not found', 401);
+
+    const decoded = jwt.verify(accessToken, process.env.JWT_SECRET_KEY);
+    if (!decoded) throw new AppError('Error : Invalid or expired token', 401);
+
+    const jwtid = decoded.jti;
+    const blacklisted = await cacheService.get(REDIS_KEYS.BLACKLISTED_TOKEN(jwtid));
+    if (blacklisted) throw new AppError('Session Expired : User has been logged out', 401);
+
+    req.user = decoded;
+    next();
+});

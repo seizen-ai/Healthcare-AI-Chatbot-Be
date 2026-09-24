@@ -1,0 +1,20 @@
+{
+  "name": "crawler-service",
+  "version": "1.0.0",
+  "description": "Standalone crawler service – scrapes websites and processes documents into embeddings for Qdrant",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.15.0",
+    "dotenv": "^17.2.1",
+    "express": "^4.22.2",
+    "fastembed": "^2.1.0",
+    "kafkajs": "^2.2.4",
+    "playwright": "^1.63.0",
+    "uuid": "^11.1.1"
+  }
+}

@@ -28,6 +28,47 @@ services:
       - .:/app
       - /app/node_modules
 
+  # ─── Crawler Service (separate app) ──────────────────────
+  crawler-service:
+    build:
+      context: .
+      dockerfile: crawler-service/Dockerfile
+
+    container_name: chatbot-crawler
+
+    restart: unless-stopped
+
+    ports:
+      - "5001:5001"
+
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - CRAWLER_PORT=5001
+      - DEV_KAFKA_BROKER=kafka:9092
+      - KAFKA_CLIENT_ID=crawler-service
+      - CRAWLER_CONSUMER_GROUP=crawler-service-group
+      - DEV_QDRANT_HOST=qdrant
+      - DEV_QDRANT_PORT=6333
+      - QDRANT_COLLECTION=hospital_knowledge
+
+    env_file:
+      - .env
+
+    depends_on:
+      kafka:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 1024M
+
   mongodb:
     image: mongo:8
 
