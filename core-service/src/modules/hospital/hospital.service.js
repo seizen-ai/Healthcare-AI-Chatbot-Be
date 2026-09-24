@@ -169,7 +169,7 @@ class HospitalService {
             requestedAt,
         });
 
-        await cacheService.delete(`hospital:${hospitalId}`);
+        await cacheService.delete(`hospital:${hospitalId}`);//Delete stale data from the redis
 
         await kafkaProducer.publish(KAFKA_TOPICS.KNOWLEDGE_CRAWLER, event);
 

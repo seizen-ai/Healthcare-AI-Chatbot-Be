@@ -6,7 +6,6 @@ export const KAFKA_TOPICS = {
 
     WEBSITE_CRAWL: "crawler.website.request",
 
-    GENERATE_EMBEDDINGS: "embedding.generate",
 
     CHATBOT_ACTIVATED: "chatbot.activation.completed",
 
