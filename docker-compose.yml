@@ -1,19 +1,17 @@
 services:
+
+  # ─── Application Services ────────────────────────────────
+
   backend:
     build:
       context: .
       dockerfile: core-service/Dockerfile
-
     container_name: chatbot-backend
-
     restart: unless-stopped
-
     ports:
       - "5000:5000"
-
     env_file:
       - core-service/.env
-
     depends_on:
       mongodb:
         condition: service_started
@@ -23,119 +21,79 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
-
     volumes:
       - .:/app
-      - /app/node_modules
+      - backend_node_modules:/app/node_modules
 
-  # ─── Crawler Service (separate app) ──────────────────────
-  crawler-service:
+  crawler:
     build:
       context: .
       dockerfile: crawler-service/Dockerfile
-
     container_name: chatbot-crawler
-
     restart: unless-stopped
-
     ports:
       - "5001:5001"
-
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - CRAWLER_PORT=5001
-      - DEV_KAFKA_BROKER=kafka:9092
-      - KAFKA_CLIENT_ID=crawler-service
-      - CRAWLER_CONSUMER_GROUP=crawler-service-group
-      - DEV_QDRANT_HOST=qdrant
-      - DEV_QDRANT_PORT=6333
-      - QDRANT_COLLECTION=hospital_knowledge
-
     env_file:
       - crawler-service/.env
-
+    environment:
+      FASTEMBED_CACHE_DIR: /root/.cache/fastembed
     depends_on:
       kafka:
         condition: service_healthy
       qdrant:
         condition: service_started
-
+    volumes:
+      - .:/app
+      - crawler_node_modules:/app/node_modules
     deploy:
       resources:
         limits:
-          cpus: "1.0"
           memory: 2048M
         reservations:
-          cpus: "0.5"
           memory: 1024M
+
+  # ─── Infrastructure ──────────────────────────────────────
 
   mongodb:
     image: mongo:8
-
     container_name: chatbot-mongodb
-
     restart: unless-stopped
-
     ports:
       - "27017:27017"
-
     volumes:
       - mongodb_data:/data/db
 
   redis:
     image: redis:8
-
     container_name: chatbot-redis
-
     restart: unless-stopped
-
     ports:
       - "6379:6379"
 
   kafka:
     image: confluentinc/cp-kafka:7.7.0
-
     container_name: chatbot-kafka
-
     restart: unless-stopped
-
     hostname: kafka
-
     ports:
       - "9092:9092"
-
     environment:
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-
       KAFKA_NODE_ID: 1
-
       KAFKA_PROCESS_ROLES: broker,controller
-
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-
     volumes:
       - kafka_data:/var/lib/kafka/data
-
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -145,21 +103,17 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
-
     container_name: chatbot-qdrant
-
     restart: unless-stopped
-
     ports:
       - "6333:6333"
       - "6334:6334"
-
     volumes:
       - qdrant_data:/qdrant/storage
 
 volumes:
   mongodb_data:
-
   qdrant_data:
-
   kafka_data:
+  backend_node_modules:
+  crawler_node_modules:

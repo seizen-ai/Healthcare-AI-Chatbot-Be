@@ -5,9 +5,10 @@ import path from 'path';
 export const VECTOR_SIZE = 384;
 const EMBED_BATCH_SIZE = 32;
 
-const FASTEMBED_CACHE_DIR = process.env.NODE_ENV === 'production'
-    ? '/root/.cache/fastembed'
-    : path.join(os.tmpdir(), 'fastembed_cache');
+const FASTEMBED_CACHE_DIR = process.env.FASTEMBED_CACHE_DIR
+    ?? (process.env.NODE_ENV === 'production'
+        ? '/root/.cache/fastembed'
+        : path.join(os.tmpdir(), 'fastembed_cache'));
 
 let embeddingModel = null;
 

@@ -4,8 +4,9 @@ import { chunkText } from '../lib/chunker.js';
 import { generateEmbeddings, VECTOR_SIZE } from '../lib/embeddings.js';
 import {
     ensureCollection,
-    deletePointsByHospital,
     upsertEmbeddedChunks,
+    deletePointsByIngestionId,
+    deletePointsByHospitalExceptIngestion,
 } from '../../../shared/qdrant/qdrant.client.js';
 
 const MAX_PAGES = 50;
@@ -13,7 +14,7 @@ const MAX_DEPTH = 3;
 const PAGE_TIMEOUT_MS = 60_000;
 
 export const handleWebsiteCrawl = async (event) => {
-    const { hospitalId, websiteUrl } = event;
+    const { hospitalId, websiteUrl, eventId: ingestionId } = event;
 
     console.log(`[WebsiteCrawl] Starting for hospital ${hospitalId}: ${websiteUrl}`);
 
@@ -103,14 +104,25 @@ export const handleWebsiteCrawl = async (event) => {
 
     console.log(`[WebsiteCrawl] Scraped ${pages.length} page(s).`);
 
-    const allChunks = pages.flatMap(({ url, text }) => chunkText(text, url));
+    const allChunks = pages.flatMap(({ url, text }) =>
+        chunkText(text, url).map((chunk) => ({ ...chunk, fileRef: url }))
+    );
     console.log(`[WebsiteCrawl] ${allChunks.length} chunk(s) created.`);
 
     const embeddedChunks = await generateEmbeddings(allChunks);
 
     await ensureCollection(VECTOR_SIZE);
-    await deletePointsByHospital(hospitalId);
-    const vectorCount = await upsertEmbeddedChunks(hospitalId, embeddedChunks);
+
+    let vectorCount;
+    try {
+        vectorCount = await upsertEmbeddedChunks(hospitalId, ingestionId, embeddedChunks);
+    } catch (err) {
+        console.error(`[WebsiteCrawl] Qdrant upsert failed, running compensation: ${err.message}`);
+        await deletePointsByIngestionId(ingestionId);
+        throw new Error(`Qdrant write failed: ${err.message}`);
+    }
+
+    await deletePointsByHospitalExceptIngestion(hospitalId, ingestionId);
 
     console.log(`[WebsiteCrawl] Done. ${vectorCount} vector(s) stored.`);
 

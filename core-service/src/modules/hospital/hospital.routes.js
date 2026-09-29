@@ -1,7 +1,7 @@
 import express from 'express';
 import { verifyToken } from '../../middlewares/verifyToken.js';
 import { inputValidation } from '../../middlewares/ValidationMiddleware.js';
-import { getHospitalById, createHospital, getHospitals, deleteHospital, activateBot } from './hospital.controller.js';
+import { getHospitalById, createHospital, getHospitals, deleteHospital, activateBot, uploadKnowledgeDocs } from './hospital.controller.js';
 import { createHospitalSchema, activateBotSchema } from './hospital.validator.js';
 import { checkHospitalOwnerShip, handleRace } from '../../middlewares/hospitalModule.js';
 
@@ -12,5 +12,6 @@ router.get('/get-hospital/:hospitalId', verifyToken, checkHospitalOwnerShip, get
 router.get('/get-hospitals', verifyToken, getHospitals);
 router.delete('/delete-hospital/:hospitalId', verifyToken, deleteHospital);
 router.post('/:hospitalId/activate', verifyToken, checkHospitalOwnerShip, inputValidation(activateBotSchema), activateBot);
+router.post('/:hospitalId/file/upload', verifyToken, checkHospitalOwnerShip, uploadKnowledgeDocs);
 
 export default router;

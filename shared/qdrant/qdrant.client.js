@@ -21,8 +21,8 @@ const COLLECTION_NAME = process.env.QDRANT_COLLECTION || 'hospital_knowledge';
 
 export const ensureCollection = async (vectorSize) => {
     try {
-        const { result: exists } = await qdrantClient.collectionExists(COLLECTION_NAME);
-        if (exists) return;
+        const response = await qdrantClient.collectionExists(COLLECTION_NAME);
+        if (response.exists) return;
     } catch (_) { }
 
     await qdrantClient.createCollection(COLLECTION_NAME, {
@@ -33,6 +33,11 @@ export const ensureCollection = async (vectorSize) => {
 
     await qdrantClient.createPayloadIndex(COLLECTION_NAME, {
         field_name: 'hospitalId',
+        field_schema: 'keyword',
+    });
+
+    await qdrantClient.createPayloadIndex(COLLECTION_NAME, {
+        field_name: 'ingestionId',
         field_schema: 'keyword',
     });
 
@@ -52,9 +57,40 @@ export const deletePointsByHospital = async (hospitalId) => {
     }
 };
 
-export const deterministicPointId = (hospitalId, source, chunkIndex) => {
+export const deletePointsByIngestionId = async (ingestionId) => {
+    try {
+        await qdrantClient.delete(COLLECTION_NAME, {
+            filter: {
+                must: [{ key: 'ingestionId', match: { value: ingestionId } }],
+            },
+        });
+        console.log(`[Qdrant] Compensation: deleted points for ingestionId ${ingestionId}.`);
+    } catch (err) {
+        console.warn(`[Qdrant] deletePointsByIngestionId warning: ${err.message}`);
+    }
+};
+
+export const deletePointsByHospitalExceptIngestion = async (hospitalId, keepIngestionId) => {
+    try {
+        await qdrantClient.delete(COLLECTION_NAME, {
+            filter: {
+                must: [
+                    { key: 'hospitalId', match: { value: hospitalId } },
+                ],
+                must_not: [
+                    { key: 'ingestionId', match: { value: keepIngestionId } },
+                ],
+            },
+        });
+        console.log(`[Qdrant] Deleted old-ingestion points for hospital ${hospitalId} (keeping ${keepIngestionId}).`);
+    } catch (err) {
+        console.warn(`[Qdrant] deletePointsByHospitalExceptIngestion warning: ${err.message}`);
+    }
+};
+
+export const deterministicPointId = (hospitalId, fileRef, chunkIndex) => {
     const hash = createHash('sha256')
-        .update(`${hospitalId}:${source}:${chunkIndex}`)
+        .update(`${hospitalId}:${fileRef}:${chunkIndex}`)
         .digest('hex');
     return [
         hash.slice(0, 8),
@@ -65,15 +101,17 @@ export const deterministicPointId = (hospitalId, source, chunkIndex) => {
     ].join('-');
 };
 
-export const upsertEmbeddedChunks = async (hospitalId, embeddedChunks) => {
+export const upsertEmbeddedChunks = async (hospitalId, ingestionId, embeddedChunks) => {
     const BATCH_SIZE = 100;
 
     const points = embeddedChunks.map((chunk) => ({
-        id: deterministicPointId(hospitalId, chunk.source, chunk.chunkIndex),
+        id: deterministicPointId(hospitalId, chunk.fileRef, chunk.chunkIndex),
         vector: chunk.embedding,
         payload: {
             hospitalId,
+            ingestionId,
             source: chunk.source,
+            fileRef: chunk.fileRef,
             chunkIndex: chunk.chunkIndex,
             text: chunk.text,
         },
@@ -84,7 +122,7 @@ export const upsertEmbeddedChunks = async (hospitalId, embeddedChunks) => {
         await qdrantClient.upsert(COLLECTION_NAME, { wait: true, points: batch });
     }
 
-    console.log(`[Qdrant] Upserted ${points.length} point(s) for hospital ${hospitalId}.`);
+    console.log(`[Qdrant] Upserted ${points.length} point(s) for hospital ${hospitalId} (ingestionId=${ingestionId}).`);
     return points.length;
 };
 

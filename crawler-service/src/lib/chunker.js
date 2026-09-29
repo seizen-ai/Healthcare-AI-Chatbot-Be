@@ -1,19 +1,37 @@
-const CHUNK_SIZE = 500;
-const CHUNK_OVERLAP = 50;
+const CHUNK_TARGET = 900;
+const CHUNK_OVERLAP = 100;
+
+const splitSentences = (text) => {
+    return text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+};
 
 export const chunkText = (text, source) => {
-    const words = text.split(/\s+/).filter(Boolean);
+    const sentences = splitSentences(text);
     const chunks = [];
-    let i = 0;
+    let current = '';
     let chunkIndex = 0;
+    let sentenceIdx = 0;
+    let overlapStart = 0;
 
-    while (i < words.length) {
-        chunks.push({
-            text: words.slice(i, i + CHUNK_SIZE).join(' '),
-            source,
-            chunkIndex: chunkIndex++,
-        });
-        i += CHUNK_SIZE - CHUNK_OVERLAP;
+    while (sentenceIdx < sentences.length) {
+        const sentence = sentences[sentenceIdx].trim();
+        if (!sentence) { sentenceIdx++; continue; }
+
+        if (current.length + sentence.length + 1 <= CHUNK_TARGET + 200) {
+            current += (current ? ' ' : '') + sentence;
+            sentenceIdx++;
+        } else {
+            if (current) {
+                chunks.push({ text: current, source, chunkIndex: chunkIndex++ });
+            }
+            const overlapText = current.slice(-CHUNK_OVERLAP);
+            current = overlapText ? overlapText + ' ' + sentence : sentence;
+            sentenceIdx++;
+        }
+    }
+
+    if (current.trim()) {
+        chunks.push({ text: current.trim(), source, chunkIndex: chunkIndex++ });
     }
 
     return chunks;

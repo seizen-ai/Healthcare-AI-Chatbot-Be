@@ -49,29 +49,10 @@ export const createHospitalSchema = z.object({
   }),
 });
 
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-  'text/csv',
-  'text/markdown',
-];
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const MAX_FILES_PER_BATCH = 10;
-const MAX_TOTAL_SIZE_BYTES = 50 * 1024 * 1024;
-
-const documentSchema = z.object({
+const documentRefSchema = z.object({
   fileRef: z.string().min(1, 'fileRef is required'),
-  fileName: z.string().min(1, 'fileName is required'),
-  mimeType: z.enum(ALLOWED_MIME_TYPES, {
-    errorMap: () => ({ message: 'Unsupported file type. Allowed: pdf, docx, txt, csv, md' }),
-  }),
-  sizeBytes: z
-    .number()
-    .int()
-    .positive('sizeBytes must be a positive integer')
-    .max(MAX_FILE_SIZE_BYTES, `Each file must be at most ${MAX_FILE_SIZE_BYTES / (1024 * 1024)} MB`),
+  mimeType: z.enum(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']).refine(val => ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'].includes(val), { message: 'Unsupported MIME type' }),
+  sizeBytes: z.number().max(10 * 1024 * 1024, 'File size exceeds 10 MB limit'),
 });
 
 const websiteCrawlBody = z.object({
@@ -89,16 +70,10 @@ const websiteCrawlBody = z.object({
 const documentCrawlBody = z.object({
   type: z.literal('document_crawl'),
   documents: z
-    .array(documentSchema)
+    .array(documentRefSchema)
     .min(1, 'At least one document is required')
-    .max(MAX_FILES_PER_BATCH, `At most ${MAX_FILES_PER_BATCH} documents per request`)
-    .refine(
-      (docs) => {
-        const totalSize = docs.reduce((sum, d) => sum + d.sizeBytes, 0);
-        return totalSize <= MAX_TOTAL_SIZE_BYTES;
-      },
-      `Total upload size must not exceed ${MAX_TOTAL_SIZE_BYTES / (1024 * 1024)} MB`
-    ),
+    .max(20, 'At most 20 documents per request')
+    .refine(docs => docs.reduce((sum, d) => sum + (d.sizeBytes || 0), 0) <= 50 * 1024 * 1024, { message: 'Total batch size exceeds 50 MB limit' }),
 });
 
 export const activateBotSchema = z.object({
@@ -107,3 +82,4 @@ export const activateBotSchema = z.object({
     hospitalId: z.string().min(1, 'hospitalId is required'),
   }),
 });
+

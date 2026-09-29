@@ -1,5 +1,6 @@
 import hospitalService from './hospital.service.js';
 import { catchAsync } from '../../utils/CatchAsync.js';
+import { streamingUploadHandler } from '../upload/upload.handler.js';
 
 export const getHospitalById = catchAsync(async (req, res) => {
     return res.status(200).json({
@@ -33,3 +34,6 @@ export const activateBot = catchAsync(async (req, res) => {
     );
     return res.status(202).json(result);
 });
+
+export const uploadKnowledgeDocs = streamingUploadHandler;
+

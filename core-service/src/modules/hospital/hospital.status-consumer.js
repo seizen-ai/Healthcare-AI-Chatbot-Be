@@ -2,6 +2,7 @@ import KafkaConsumer from '../../../../shared/kafka/consumer/kafka.consumer.js';
 import { KAFKA_TOPICS } from '../../../../shared/kafka/topics/kafka.topics.js';
 import hospitalRepository from './hospital.repository.js';
 import { cacheService } from '../../../../shared/redis/index.js';
+import { KnowledgeDocFile } from '../upload/knowledgeDocFile.model.js';
 
 const statusConsumer = new KafkaConsumer(
     process.env.STATUS_CONSUMER_GROUP || 'knowledge-status-group'
@@ -21,9 +22,19 @@ const handleStatusEvent = async (payload) => {
 
     if (success) {
         updated = await hospitalRepository.setBotActivationSuccess(hospitalId, eventId);
+
+        await KnowledgeDocFile.updateMany(
+            { hospitalId, status: 'PROCESSING', isDeleted: false },
+            { $set: { status: 'ACTIVE', errorMessage: null } }
+        );
     } else {
         const errMsg = errorMessage || 'Unknown error during knowledge processing.';
         updated = await hospitalRepository.setBotActivationFailed(hospitalId, eventId, errMsg);
+
+        await KnowledgeDocFile.updateMany(
+            { hospitalId, status: 'PROCESSING', isDeleted: false },
+            { $set: { status: 'FAILED', errorMessage: errMsg } }
+        );
     }
 
     if (!updated) {
@@ -44,3 +55,4 @@ export const startStatusConsumer = async () => {
 
     console.log('[StatusConsumer] Listening on topic:', KAFKA_TOPICS.KNOWLEDGE_PROCESS_STATUS);
 };
+

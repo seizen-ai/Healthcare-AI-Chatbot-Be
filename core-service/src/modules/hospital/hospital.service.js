@@ -5,6 +5,7 @@ import hospitalRepository from './hospital.repository.js';
 import { cacheService } from '../../../../shared/redis/index.js';
 import kafkaProducer from '../../../../shared/kafka/producer/kafka.producer.js';
 import { KAFKA_TOPICS } from '../../../../shared/kafka/topics/kafka.topics.js';
+import knowledgeDocFileRepository from '../upload/knowledgeDocFile.repository.js';
 
 const toSlug = (name) =>
     name
@@ -147,10 +148,24 @@ class HospitalService {
                 requestedAt,
             };
         } else if (type === 'document_crawl') {
-            const documents = body.documents.map(({ fileRef, fileName, mimeType }) => ({
-                fileRef,
-                fileName,
-                mimeType,
+            const requestedRefs = body.documents.map((d) => d.fileRef);
+
+            const dbDocs = await knowledgeDocFileRepository.findByFileRefsAndHospital(
+                requestedRefs,
+                hospitalId
+            );
+
+            if (dbDocs.length === 0) {
+                throw new AppError('No valid uploaded documents found for the provided file references.', 400);
+            }
+
+            const docIds = dbDocs.map((d) => d._id);
+            await knowledgeDocFileRepository.bulkSetStatus(docIds, 'PROCESSING');
+
+            const documents = dbDocs.map((d) => ({
+                fileRef: d.fileRef,
+                fileName: d.fileName,
+                mimeType: d.mimeType,
             }));
 
             event = {
@@ -169,7 +184,7 @@ class HospitalService {
             requestedAt,
         });
 
-        await cacheService.delete(`hospital:${hospitalId}`);//Delete stale data from the redis
+        await cacheService.delete(`hospital:${hospitalId}`);
 
         await kafkaProducer.publish(KAFKA_TOPICS.KNOWLEDGE_CRAWLER, event);
 
@@ -180,6 +195,8 @@ class HospitalService {
             message: 'Bot activation started. Knowledge base is being built, this may take a few minutes.',
         };
     }
+
 }
 
 export default new HospitalService();
+

@@ -72,8 +72,8 @@ describe('activateBotSchema — document_crawl', () => {
         assert.equal(result.success, false);
     });
 
-    it('rejects more than 10 documents', () => {
-        const docs = Array.from({ length: 11 }, (_, i) => ({
+    it('rejects more than 20 documents', () => {
+        const docs = Array.from({ length: 21 }, (_, i) => ({
             ...validDoc,
             fileRef: `file-${i}`,
             fileName: `doc-${i}.pdf`,
