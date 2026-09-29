@@ -51,8 +51,9 @@ export const createHospitalSchema = z.object({
 
 const documentRefSchema = z.object({
   fileRef: z.string().min(1, 'fileRef is required'),
-  mimeType: z.enum(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']).refine(val => ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'].includes(val), { message: 'Unsupported MIME type' }),
-  sizeBytes: z.number().max(10 * 1024 * 1024, 'File size exceeds 10 MB limit'),
+  fileName: z.string().optional(),
+  mimeType: z.enum(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'], { message: 'Unsupported MIME type' }),
+  sizeBytes: z.number().max(10 * 1024 * 1024, 'File size exceeds 10 MB limit').optional(),
 });
 
 const websiteCrawlBody = z.object({

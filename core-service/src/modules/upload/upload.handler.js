@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import Busboy from 'busboy';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../../utils/AppError.js';
-import { streamUpload, deleteObject } from './storage.service.js';
+import { streamUpload, deleteObject } from '../../../../shared/s3/s3.client.js';
 import knowledgeDocFileRepository from './knowledgeDocFile.repository.js';
 import mongoose from 'mongoose';
 

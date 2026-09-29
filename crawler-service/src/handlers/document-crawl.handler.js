@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import { downloadToTempFile } from '../lib/storage.js';
+import { downloadToTempFile } from '../../../shared/s3/s3.client.js';
 import { extractText } from '../lib/extractors.js';
 import { chunkText } from '../lib/chunker.js';
 import { generateEmbeddings, VECTOR_SIZE } from '../lib/embeddings.js';
