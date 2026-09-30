@@ -17,6 +17,14 @@ export const inputValidation = (schema) => {
         }));
 
         
+        import('fs').then(fs => {
+            fs.writeFileSync('/tmp/val_err.json', JSON.stringify({
+                body: req.body,
+                params: req.params,
+                errors: formattedErrors
+            }, null, 2));
+        }).catch(() => {});
+        console.error('Validation Error:', JSON.stringify(formattedErrors, null, 2));
         return next(new AppError('Input validation error', 400, formattedErrors));
         }
 
