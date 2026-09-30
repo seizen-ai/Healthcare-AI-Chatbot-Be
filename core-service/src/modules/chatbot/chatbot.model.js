@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const hospitalSchema = new mongoose.Schema(
+const chatbotSchema = new mongoose.Schema(
   {
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -72,7 +72,7 @@ const hospitalSchema = new mongoose.Schema(
       step: {
         type: String,
         enum: [
-          "hospital_created",
+          "chatbot_created",
           "website_added",
           "website_verified",
           "bot_configured",
@@ -81,7 +81,7 @@ const hospitalSchema = new mongoose.Schema(
           "crawler_failed",
           "completed",
         ],
-        default: "hospital_created",
+        default: "chatbot_created",
       },
       completedAt: {
         type: Date,
@@ -111,7 +111,7 @@ const hospitalSchema = new mongoose.Schema(
   }
 );
 
-hospitalSchema.index({ ownerId: 1, status: 1, createdAt: -1 });
-hospitalSchema.index({ slug: 1 }, { unique: true });
+chatbotSchema.index({ ownerId: 1, status: 1, createdAt: -1 });
+chatbotSchema.index({ slug: 1 }, { unique: true });
 
-export const Hospital = mongoose.model("Hospital", hospitalSchema);
+export const Chatbot = mongoose.model("Chatbot", chatbotSchema);

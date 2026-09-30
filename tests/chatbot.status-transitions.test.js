@@ -1,19 +1,19 @@
 /**
- * Tests: Hospital onboarding status transitions.
+ * Tests: Chatbot onboarding status transitions.
  *
  * Tests the status state machine logic:
  *   NOT_STARTED → IN_PROGRESS → ACTIVE | FAILED
  *
  * These are pure logic tests — no DB or Kafka needed.
  *
- * Run: node --test tests/hospital.status-transitions.test.js
+ * Run: node --test tests/chatbot.status-transitions.test.js
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ─── Status transition rules ────────────────────────────
 const VALID_TRANSITIONS = {
-    hospital_created:      ['knowledge_processing'],
+    chatbot_created:       ['knowledge_processing'],
     website_added:         ['knowledge_processing'],
     website_verified:      ['knowledge_processing'],
     bot_configured:        ['knowledge_processing'],
@@ -44,8 +44,8 @@ const applyStatusEvent = (currentStep, statusEvent) => {
 
 // ─── Tests ──────────────────────────────────────────────
 describe('Status transitions — canTransition', () => {
-    it('allows hospital_created → knowledge_processing', () => {
-        assert.equal(canTransition('hospital_created', 'knowledge_processing'), true);
+    it('allows chatbot_created → knowledge_processing', () => {
+        assert.equal(canTransition('chatbot_created', 'knowledge_processing'), true);
     });
 
     it('allows knowledge_processing → knowledge_ready', () => {
@@ -64,8 +64,8 @@ describe('Status transitions — canTransition', () => {
         assert.equal(canTransition('knowledge_ready', 'knowledge_processing'), true);
     });
 
-    it('blocks hospital_created → knowledge_ready (skip)', () => {
-        assert.equal(canTransition('hospital_created', 'knowledge_ready'), false);
+    it('blocks chatbot_created → knowledge_ready (skip)', () => {
+        assert.equal(canTransition('chatbot_created', 'knowledge_ready'), false);
     });
 
     it('blocks knowledge_ready → crawler_failed', () => {
@@ -91,7 +91,7 @@ describe('Status consumer — applyStatusEvent', () => {
     });
 
     it('success event when NOT processing → no update', () => {
-        const result = applyStatusEvent('hospital_created', { success: true });
+        const result = applyStatusEvent('chatbot_created', { success: true });
         assert.equal(result.updated, false);
     });
 

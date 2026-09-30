@@ -1,13 +1,13 @@
 import { KnowledgeDocFile } from './knowledgeDocFile.model.js';
 
 class KnowledgeDocFileRepository {
-    findByHospitalAndHash(hospitalId, hash) {
-        return KnowledgeDocFile.findOne({ hospitalId, hash, isDeleted: false });
+    findByChatbotAndHash(chatbotId, hash) {
+        return KnowledgeDocFile.findOne({ chatbotId, hash, isDeleted: false });
     }
 
-    async getHospitalDocStats(hospitalId) {
+    async getChatbotDocStats(chatbotId) {
         const [result] = await KnowledgeDocFile.aggregate([
-            { $match: { hospitalId, isDeleted: false } },
+            { $match: { chatbotId, isDeleted: false } },
             {
                 $group: {
                     _id: null,
@@ -23,10 +23,10 @@ class KnowledgeDocFileRepository {
         return KnowledgeDocFile.create(data);
     }
 
-    findByFileRefsAndHospital(fileRefs, hospitalId) {
+    findByFileRefsAndChatbot(fileRefs, chatbotId) {
         return KnowledgeDocFile.find({
             fileRef: { $in: fileRefs },
-            hospitalId,
+            chatbotId,
             isDeleted: false,
         });
     }

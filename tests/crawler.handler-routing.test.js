@@ -25,25 +25,25 @@ const routeEvent = (event) => {
 
 describe('Crawler handler routing', () => {
     it('routes website_crawl to the website handler', () => {
-        const handler = routeEvent({ type: 'website_crawl', hospitalId: 'h1', eventId: 'e1' });
+        const handler = routeEvent({ type: 'website_crawl', chatbotId: 'c1', eventId: 'e1' });
         assert.equal(handler, 'website_crawl_handler');
     });
 
     it('routes document_crawl to the document handler', () => {
-        const handler = routeEvent({ type: 'document_crawl', hospitalId: 'h1', eventId: 'e1' });
+        const handler = routeEvent({ type: 'document_crawl', chatbotId: 'c1', eventId: 'e1' });
         assert.equal(handler, 'document_crawl_handler');
     });
 
     it('throws on unknown type', () => {
         assert.throws(
-            () => routeEvent({ type: 'magic_crawl', hospitalId: 'h1', eventId: 'e1' }),
+            () => routeEvent({ type: 'magic_crawl', chatbotId: 'c1', eventId: 'e1' }),
             { message: 'Unknown event type: magic_crawl' }
         );
     });
 
     it('throws on undefined type', () => {
         assert.throws(
-            () => routeEvent({ hospitalId: 'h1', eventId: 'e1' }),
+            () => routeEvent({ chatbotId: 'c1', eventId: 'e1' }),
             /Unknown event type/
         );
     });

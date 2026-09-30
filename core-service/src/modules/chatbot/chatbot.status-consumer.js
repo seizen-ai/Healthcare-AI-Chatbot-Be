@@ -1,6 +1,6 @@
 import KafkaConsumer from '../../../../shared/kafka/consumer/kafka.consumer.js';
 import { KAFKA_TOPICS } from '../../../../shared/kafka/topics/kafka.topics.js';
-import hospitalRepository from './hospital.repository.js';
+import chatbotRepository from './chatbot.repository.js';
 import { cacheService } from '../../../../shared/redis/index.js';
 import { KnowledgeDocFile } from '../upload/knowledgeDocFile.model.js';
 
@@ -9,11 +9,11 @@ const statusConsumer = new KafkaConsumer(
 );
 
 const handleStatusEvent = async (payload) => {
-    const { eventId, hospitalId, success, error: errorMessage } = payload;
+    const { eventId, chatbotId, success, error: errorMessage } = payload;
 
-    console.log(`[StatusConsumer] Received status for hospital ${hospitalId} | eventId=${eventId} | success=${success}`);
+    console.log(`[StatusConsumer] Received status for chatbot ${chatbotId} | eventId=${eventId} | success=${success}`);
 
-    if (!eventId || !hospitalId) {
+    if (!eventId || !chatbotId) {
         console.warn('[StatusConsumer] Malformed status event, skipping.');
         return;
     }
@@ -21,30 +21,30 @@ const handleStatusEvent = async (payload) => {
     let updated;
 
     if (success) {
-        updated = await hospitalRepository.setBotActivationSuccess(hospitalId, eventId);
+        updated = await chatbotRepository.setBotActivationSuccess(chatbotId, eventId);
 
         await KnowledgeDocFile.updateMany(
-            { hospitalId, status: 'PROCESSING', isDeleted: false },
+            { chatbotId, status: 'PROCESSING', isDeleted: false },
             { $set: { status: 'ACTIVE', errorMessage: null } }
         );
     } else {
         const errMsg = errorMessage || 'Unknown error during knowledge processing.';
-        updated = await hospitalRepository.setBotActivationFailed(hospitalId, eventId, errMsg);
+        updated = await chatbotRepository.setBotActivationFailed(chatbotId, eventId, errMsg);
 
         await KnowledgeDocFile.updateMany(
-            { hospitalId, status: 'PROCESSING', isDeleted: false },
+            { chatbotId, status: 'PROCESSING', isDeleted: false },
             { $set: { status: 'FAILED', errorMessage: errMsg } }
         );
     }
 
     if (!updated) {
-        console.warn(`[StatusConsumer] No update for hospital ${hospitalId} (eventId mismatch or already processed).`);
+        console.warn(`[StatusConsumer] No update for chatbot ${chatbotId} (eventId mismatch or already processed).`);
         return;
     }
 
-    await cacheService.delete(`hospital:${hospitalId}`);
+    await cacheService.delete(`chatbot:${chatbotId}`);
 
-    console.log(`[StatusConsumer] Hospital ${hospitalId} updated → step: ${updated.onboarding.step}, status: ${updated.status}`);
+    console.log(`[StatusConsumer] Chatbot ${chatbotId} updated → step: ${updated.onboarding.step}, status: ${updated.status}`);
 };
 
 export const startStatusConsumer = async () => {
@@ -55,4 +55,3 @@ export const startStatusConsumer = async () => {
 
     console.log('[StatusConsumer] Listening on topic:', KAFKA_TOPICS.KNOWLEDGE_PROCESS_STATUS);
 };
-

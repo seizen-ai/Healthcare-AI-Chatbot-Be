@@ -10,7 +10,7 @@ const consumer = new KafkaConsumer(GROUP_ID);
 const publishStatus = async (event, success, stats = {}, error = null) => {
     const statusEvent = {
         eventId: event.eventId,
-        hospitalId: event.hospitalId,
+        chatbotId: event.chatbotId,
         type: event.type,
         success,
         error,
@@ -22,11 +22,11 @@ const publishStatus = async (event, success, stats = {}, error = null) => {
     };
 
     await kafkaProducer.publish(TOPICS.KNOWLEDGE_PROCESS_STATUS, statusEvent);
-    console.log(`[Consumer] Published status: success=${success} for hospital ${event.hospitalId}`);
+    console.log(`[Consumer] Published status: success=${success} for chatbot ${event.chatbotId}`);
 };
 
 const handleEvent = async (event) => {
-    console.log(`[Consumer] Received event: type=${event.type}, hospitalId=${event.hospitalId}, eventId=${event.eventId}`);
+    console.log(`[Consumer] Received event: type=${event.type}, chatbotId=${event.chatbotId}, eventId=${event.eventId}`);
 
     let stats = {};
 
@@ -44,7 +44,7 @@ const handleEvent = async (event) => {
 
         await publishStatus(event, true, stats);
     } catch (err) {
-        console.error(`[Consumer] Handler failed for hospital ${event.hospitalId}:`, err.message);
+        console.error(`[Consumer] Handler failed for chatbot ${event.chatbotId}:`, err.message);
         await publishStatus(event, false, stats, err.message);
     }
 };

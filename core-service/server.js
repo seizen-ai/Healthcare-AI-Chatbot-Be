@@ -11,13 +11,13 @@ import { ensureKafkaTopics } from '../shared/kafka/admin/kafka.admin.js';
 import { retryOperation } from '../shared/kafka/utils/kafka.retry.js';
 import { startNotificationService } from './src/modules/notification/notification.bootstrap.js';
 import { startKeepAliveCron } from './src/utils/cron.js';
-import { startStatusConsumer } from './src/modules/hospital/hospital.status-consumer.js';
-import { startActivationTimeoutCron } from './src/modules/hospital/hospital.activation-timeout.js';
+import { startStatusConsumer } from './src/modules/chatbot/chatbot.status-consumer.js';
+import { startActivationTimeoutCron } from './src/modules/chatbot/chatbot.activation-timeout.js';
 import { checkRedisConnection } from '../shared/redis/bootstrap/redis.bootstrap.js';
 import { redisClient } from '../shared/redis/index.js';
 
 import authRouter from './src/modules/auth/auth.routes.js';
-import hospitalRouter from './src/modules/hospital/hospital.routes.js';
+import chatbotRouter from './src/modules/chatbot/chatbot.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -54,7 +54,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/api/auth', authRouter);
-app.use('/api/hospital', hospitalRouter);
+app.use('/api/chatbot', chatbotRouter);
 
 app.use(globalErrorHandler);
 

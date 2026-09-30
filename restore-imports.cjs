@@ -15,7 +15,7 @@ const fixes = {
         { find: "import { cacheService } from '';", replace: "import { cacheService } from '../../../shared/redis/index.js';" },
         { find: "import { REDIS_KEYS } from '';", replace: "import { REDIS_KEYS } from '../../../shared/redis/constants/redis.constants.js';" }
     ],
-    'core-service/src/middlewares/hospitalModule.js': [
+    'core-service/src/middlewares/chatbotModule.js': [
         { find: "import { cacheService } from '';", replace: "import { cacheService } from '../../../shared/redis/index.js';" }
     ],
     'core-service/src/middlewares/ErrorMiddleware.js': [

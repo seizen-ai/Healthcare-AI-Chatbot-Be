@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { AppError } from '../../utils/AppError.js';
-import hospitalRepository from './hospital.repository.js';
+import chatbotRepository from './chatbot.repository.js';
 import { cacheService } from '../../../../shared/redis/index.js';
 import kafkaProducer from '../../../../shared/kafka/producer/kafka.producer.js';
 import { KAFKA_TOPICS } from '../../../../shared/kafka/topics/kafka.topics.js';
@@ -19,10 +19,10 @@ const toSlug = (name) =>
 const generateUniqueSlug = async (base, maxAttempts = 5) => {
     for (let i = 0; i < maxAttempts; i++) {
         const candidate = i === 0 ? base : `${base}-${randomBytes(3).toString('hex')}`;
-        const taken = await hospitalRepository.slugExists(candidate);
+        const taken = await chatbotRepository.slugExists(candidate);
         if (!taken) return candidate;
     }
-    throw new AppError('Could not generate a unique hospital slug. Please try again.', 500);
+    throw new AppError('Could not generate a unique chatbot slug. Please try again.', 500);
 };
 
 const generatePublicKey = () => randomBytes(16).toString('hex');
@@ -59,31 +59,31 @@ const isUrlSafe = (urlString) => {
     }
 };
 
-class HospitalService {
-    async createHospital(data, ownerId, idempotencyKey) {
+class ChatbotService {
+    async createChatbot(data, ownerId, idempotencyKey) {
         const slug = await generateUniqueSlug(toSlug(data.name));
         const publicKey = generatePublicKey();
 
-        const hospital = await hospitalRepository.createHospital({
+        const chatbot = await chatbotRepository.createChatbot({
             ...data,
             ownerId,
             slug,
             publicKey,
         });
 
-        const listCacheKey = `hospitals:user:${ownerId}`;
+        const listCacheKey = `chatbots:user:${ownerId}`;
         await cacheService.delete(listCacheKey);
 
-        const itemCacheKey = `hospital:${hospital._id}`;
-        await cacheService.set(itemCacheKey, hospital, { ttlSeconds: 300 });
+        const itemCacheKey = `chatbot:${chatbot._id}`;
+        await cacheService.set(itemCacheKey, chatbot, { ttlSeconds: 300 });
         await cacheService.set(`req-status:${ownerId}:${idempotencyKey}`, 'COMPLETED', { keepTtl: true });
-        await cacheService.set(`req-response:${ownerId}:${idempotencyKey}`, { payload: hospital, statusCode: 201 }, { ttlSeconds: 24 * 60 * 60 });
+        await cacheService.set(`req-response:${ownerId}:${idempotencyKey}`, { payload: chatbot, statusCode: 201 }, { ttlSeconds: 24 * 60 * 60 });
 
-        return hospital;
+        return chatbot;
     }
 
-    async getHospitals(userId, cursor, limit) {
-        const listCacheKey = `hospitals:user:${userId}:${cursor}:${limit}`;
+    async getChatbots(userId, cursor, limit) {
+        const listCacheKey = `chatbots:user:${userId}:${cursor}:${limit}`;
 
         const query = {
             ownerId: userId,
@@ -94,35 +94,35 @@ class HospitalService {
             query._id = { $lt: cursor };
         }
 
-        const hospitals = await hospitalRepository.getPaginatedHospitals(query, -1, limit + 1);
-        if (!hospitals) throw new AppError('Hospitals Not Found', 404);
+        const chatbots = await chatbotRepository.getPaginatedChatbots(query, -1, limit + 1);
+        if (!chatbots) throw new AppError('Chatbots Not Found', 404);
 
-        const nextCursor = hospitals.length == limit + 1 ? hospitals[hospitals.length - 2]._id : null;
+        const nextCursor = chatbots.length == limit + 1 ? chatbots[chatbots.length - 2]._id : null;
 
-        if (hospitals.length == limit + 1) {
-            hospitals.pop();
+        if (chatbots.length == limit + 1) {
+            chatbots.pop();
         }
 
-        const result = { data: hospitals, nextCursor };
+        const result = { data: chatbots, nextCursor };
         await cacheService.set(listCacheKey, result, 300);
         return result;
     }
 
-    async deleteHospital(hospitalId, ownerId) {
-        const result = await hospitalRepository.softDeleteHospital({ _id: hospitalId, isDeleted: false, ownerId });
-        if (!result) throw new AppError('Hospital Not Found', 404);
+    async deleteChatbot(chatbotId, ownerId) {
+        const result = await chatbotRepository.softDeleteChatbot({ _id: chatbotId, isDeleted: false, ownerId });
+        if (!result) throw new AppError('Chatbot Not Found', 404);
 
-        await cacheService.delete(`hospitals:user:${ownerId}`);
-        await cacheService.delete(`hospital:${hospitalId}`);
+        await cacheService.delete(`chatbots:user:${ownerId}`);
+        await cacheService.delete(`chatbot:${chatbotId}`);
 
         return {
             success: true,
-            message: "Hospital Deleted Successfully",
+            message: "Chatbot Deleted Successfully",
         };
     }
 
-    async activateBot(hospitalId, hospital, body) {
-        if (hospital.onboarding?.step === 'knowledge_processing') {
+    async activateBot(chatbotId, chatbot, body) {
+        if (chatbot.onboarding?.step === 'knowledge_processing') {
             throw new AppError('Bot activation is already in progress. Please wait.', 409);
         }
 
@@ -141,7 +141,7 @@ class HospitalService {
 
             event = {
                 eventId,
-                hospitalId: hospitalId.toString(),
+                chatbotId: chatbotId.toString(),
                 type,
                 websiteUrl,
                 documents: null,
@@ -150,9 +150,9 @@ class HospitalService {
         } else if (type === 'document_crawl') {
             const requestedRefs = body.documents.map((d) => d.fileRef);
 
-            const dbDocs = await knowledgeDocFileRepository.findByFileRefsAndHospital(
+            const dbDocs = await knowledgeDocFileRepository.findByFileRefsAndChatbot(
                 requestedRefs,
-                hospitalId
+                chatbotId
             );
 
             if (dbDocs.length === 0) {
@@ -170,7 +170,7 @@ class HospitalService {
 
             event = {
                 eventId,
-                hospitalId: hospitalId.toString(),
+                chatbotId: chatbotId.toString(),
                 type,
                 websiteUrl: null,
                 documents,
@@ -178,19 +178,19 @@ class HospitalService {
             };
         }
 
-        await hospitalRepository.setBotActivationInProgress(hospitalId, {
+        await chatbotRepository.setBotActivationInProgress(chatbotId, {
             eventId,
             type,
             requestedAt,
         });
 
-        await cacheService.delete(`hospital:${hospitalId}`);
+        await cacheService.delete(`chatbot:${chatbotId}`);
 
         await kafkaProducer.publish(KAFKA_TOPICS.KNOWLEDGE_CRAWLER, event);
 
         return {
             success: true,
-            hospitalId: hospitalId.toString(),
+            chatbotId: chatbotId.toString(),
             status: 'IN_PROGRESS',
             message: 'Bot activation started. Knowledge base is being built, this may take a few minutes.',
         };
@@ -198,5 +198,4 @@ class HospitalService {
 
 }
 
-export default new HospitalService();
-
+export default new ChatbotService();

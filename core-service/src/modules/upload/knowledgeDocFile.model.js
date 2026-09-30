@@ -4,9 +4,9 @@ const DOC_STATUS = ['UPLOADED', 'PROCESSING', 'ACTIVE', 'FAILED'];
 
 const knowledgeDocFileSchema = new mongoose.Schema(
     {
-        hospitalId: {
+        chatbotId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Hospital',
+            ref: 'Chatbot',
             required: true,
             index: true,
         },
@@ -54,10 +54,10 @@ const knowledgeDocFileSchema = new mongoose.Schema(
 );
 
 knowledgeDocFileSchema.index(
-    { hospitalId: 1, hash: 1 },
+    { chatbotId: 1, hash: 1 },
     { unique: true, partialFilterExpression: { isDeleted: false } }
 );
 
-knowledgeDocFileSchema.index({ hospitalId: 1, isDeleted: 1 });
+knowledgeDocFileSchema.index({ chatbotId: 1, isDeleted: 1 });
 
 export const KnowledgeDocFile = mongoose.model('KnowledgeDocFile', knowledgeDocFileSchema);

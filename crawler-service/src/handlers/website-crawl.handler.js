@@ -6,7 +6,7 @@ import {
     ensureCollection,
     upsertEmbeddedChunks,
     deletePointsByIngestionId,
-    deletePointsByHospitalExceptIngestion,
+    deletePointsByChatbotExceptIngestion,
 } from '../../../shared/qdrant/qdrant.client.js';
 
 const MAX_PAGES = 50;
@@ -14,9 +14,9 @@ const MAX_DEPTH = 3;
 const PAGE_TIMEOUT_MS = 60_000;
 
 export const handleWebsiteCrawl = async (event) => {
-    const { hospitalId, websiteUrl, eventId: ingestionId } = event;
+    const { chatbotId, websiteUrl, eventId: ingestionId } = event;
 
-    console.log(`[WebsiteCrawl] Starting for hospital ${hospitalId}: ${websiteUrl}`);
+    console.log(`[WebsiteCrawl] Starting for chatbot ${chatbotId}: ${websiteUrl}`);
 
     const origin = new URL(websiteUrl).origin;
     const visited = new Set();
@@ -115,14 +115,14 @@ export const handleWebsiteCrawl = async (event) => {
 
     let vectorCount;
     try {
-        vectorCount = await upsertEmbeddedChunks(hospitalId, ingestionId, embeddedChunks);
+        vectorCount = await upsertEmbeddedChunks(chatbotId, ingestionId, embeddedChunks);
     } catch (err) {
         console.error(`[WebsiteCrawl] Qdrant upsert failed, running compensation: ${err.message}`);
         await deletePointsByIngestionId(ingestionId);
         throw new Error(`Qdrant write failed: ${err.message}`);
     }
 
-    await deletePointsByHospitalExceptIngestion(hospitalId, ingestionId);
+    await deletePointsByChatbotExceptIngestion(chatbotId, ingestionId);
 
     console.log(`[WebsiteCrawl] Done. ${vectorCount} vector(s) stored.`);
 

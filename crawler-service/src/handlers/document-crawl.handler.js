@@ -10,19 +10,19 @@ import {
     ensureCollection,
     upsertEmbeddedChunks,
     deletePointsByIngestionId,
-    deletePointsByHospitalExceptIngestion,
+    deletePointsByChatbotExceptIngestion,
 } from '../../../shared/qdrant/qdrant.client.js';
 
 const TEMP_DIR = os.tmpdir();
 
 export const handleDocumentCrawl = async (event) => {
-    const { hospitalId, documents, eventId: ingestionId } = event;
+    const { chatbotId, documents, eventId: ingestionId } = event;
 
     if (!documents || documents.length === 0) {
         throw new Error('No documents provided in the event.');
     }
 
-    console.log(`[DocumentCrawl] Starting for hospital ${hospitalId}: ${documents.length} document(s), ingestionId=${ingestionId}.`);
+    console.log(`[DocumentCrawl] Starting for chatbot ${chatbotId}: ${documents.length} document(s), ingestionId=${ingestionId}.`);
 
     const tempFiles = [];
 
@@ -63,7 +63,7 @@ export const handleDocumentCrawl = async (event) => {
 
         let vectorCount;
         try {
-            vectorCount = await upsertEmbeddedChunks(hospitalId, ingestionId, embeddedChunks);
+            vectorCount = await upsertEmbeddedChunks(chatbotId, ingestionId, embeddedChunks);
         } catch (err) {
             console.error(`[DocumentCrawl] Qdrant upsert failed, running compensation: ${err.message}`);
             await deletePointsByIngestionId(ingestionId);
@@ -71,7 +71,7 @@ export const handleDocumentCrawl = async (event) => {
         }
 
         // Success: delete old ingestion points
-        await deletePointsByHospitalExceptIngestion(hospitalId, ingestionId);
+        await deletePointsByChatbotExceptIngestion(chatbotId, ingestionId);
 
         console.log(`[DocumentCrawl] Done. ${vectorCount} vector(s) stored.`);
 

@@ -1,14 +1,14 @@
 /**
- * Tests: hospital.validator — activateBotSchema
+ * Tests: chatbot.validator — activateBotSchema
  *
- * Run: node --test tests/hospital.validator.test.js
+ * Run: node --test tests/chatbot.validator.test.js
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { activateBotSchema } from '../core-service/src/modules/hospital/hospital.validator.js';
+import { activateBotSchema } from '../core-service/src/modules/chatbot/chatbot.validator.js';
 
 // ─── Helpers ────────────────────────────────────────────
-const parse = (body, params = { hospitalId: '507f1f77bcf86cd799439011' }) =>
+const parse = (body, params = { chatbotId: '507f1f77bcf86cd799439011' }) =>
     activateBotSchema.safeParse({ body, params });
 
 // ─── website_crawl ──────────────────────────────────────
@@ -106,7 +106,7 @@ describe('activateBotSchema — invalid type', () => {
         assert.equal(result.success, false);
     });
 
-    it('rejects missing hospitalId param', () => {
+    it('rejects missing chatbotId param', () => {
         const result = activateBotSchema.safeParse({
             body: { type: 'website_crawl', websiteUrl: 'https://example.com' },
             params: {},

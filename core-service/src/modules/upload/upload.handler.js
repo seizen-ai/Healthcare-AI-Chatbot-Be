@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 const pipeline = promisify(pipelineCb);
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MAX_DOCS_PER_HOSPITAL = 20;
+const MAX_DOCS_PER_CHATBOT = 20;
 const MAX_TOTAL_SIZE = 10 * 1024 * 1024;
 
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'docx', 'txt']);
@@ -133,7 +133,7 @@ class HashTransform extends Transform {
 }
 
 export const streamingUploadHandler = (req, res, next) => {
-    const hospitalId = req.params.hospitalId;
+    const chatbotId = req.params.chatbotId;
     // client-provided hash is no longer used; hash will be calculated on server
     let fileProcessed = false;
     let uploadedKey = null;
@@ -181,16 +181,16 @@ export const streamingUploadHandler = (req, res, next) => {
 
             // Duplicate check will be performed after server hash calculation.
 
-            const { count, totalSize } = await knowledgeDocFileRepository.getHospitalDocStats(
-                new mongoose.Types.ObjectId(hospitalId)
+            const { count, totalSize } = await knowledgeDocFileRepository.getChatbotDocStats(
+                new mongoose.Types.ObjectId(chatbotId)
             );
-            if (count >= MAX_DOCS_PER_HOSPITAL) {
+            if (count >= MAX_DOCS_PER_CHATBOT) {
                 fileStream.resume();
-                return finish(new AppError(`Document limit reached. Maximum ${MAX_DOCS_PER_HOSPITAL} documents per hospital.`, 400));
+                return finish(new AppError(`Document limit reached. Maximum ${MAX_DOCS_PER_CHATBOT} documents per chatbot.`, 400));
             }
 
             const sanitized = sanitizeFileName(rawFileName);
-            const objectKey = `${hospitalId}/${uuidv4()}-${sanitized}`;
+            const objectKey = `${chatbotId}/${uuidv4()}-${sanitized}`;
 
             const sizeLimiter = new SizeLimitTransform(MAX_FILE_SIZE);
             const hashTransform = new HashTransform();
@@ -220,10 +220,10 @@ export const streamingUploadHandler = (req, res, next) => {
             const serverHash = hashTransform.digest;
 
             // Check for duplicate based on server-calculated hash
-            const existingDup = await knowledgeDocFileRepository.findByHospitalAndHash(hospitalId, serverHash);
+            const existingDup = await knowledgeDocFileRepository.findByChatbotAndHash(chatbotId, serverHash);
             if (existingDup) {
                 // Duplicate found, clean up uploaded object and respond
-                await deleteObject(objectKey).catch(() => {});
+                await deleteObject(objectKey).catch(() => { });
                 return res.status(200).json({
                     status: 'already_uploaded',
                     file: { id: existingDup._id, fileName: existingDup.fileName, fileRef: existingDup.fileRef },
@@ -243,7 +243,7 @@ export const streamingUploadHandler = (req, res, next) => {
             let doc;
             try {
                 doc = await knowledgeDocFileRepository.create({
-                    hospitalId,
+                    chatbotId,
                     fileName: rawFileName,
                     mimeType: declaredMime,
                     sizeBytes: actualSize,
@@ -254,7 +254,7 @@ export const streamingUploadHandler = (req, res, next) => {
             } catch (err) {
                 if (err.code === 11000) {
                     await deleteObject(objectKey);
-                    const existing = await knowledgeDocFileRepository.findByHospitalAndHash(hospitalId, serverHash);
+                    const existing = await knowledgeDocFileRepository.findByChatbotAndHash(chatbotId, serverHash);
                     if (existing) {
                         finished = true;
                         return res.status(200).json({
@@ -276,7 +276,7 @@ export const streamingUploadHandler = (req, res, next) => {
             });
         } catch (err) {
             if (uploadedKey) {
-                await deleteObject(uploadedKey).catch(() => {});
+                await deleteObject(uploadedKey).catch(() => { });
             }
             return finish(err);
         }

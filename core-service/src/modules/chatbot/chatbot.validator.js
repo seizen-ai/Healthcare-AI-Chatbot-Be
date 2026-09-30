@@ -16,13 +16,13 @@ const emailField = z
   .email('Contact email is invalid')
   .toLowerCase();
 
-export const createHospitalSchema = z.object({
+export const createChatbotSchema = z.object({
   body: z.object({
     name: z
       .string()
       .trim()
-      .min(1, 'Hospital name must be at least 1 characters')
-      .max(150, 'Hospital name must be at most 150 characters'),
+      .min(1, 'Chatbot name must be at least 1 characters')
+      .max(150, 'Chatbot name must be at most 150 characters'),
 
     website: z.object({
       url: urlField,
@@ -80,7 +80,6 @@ const documentCrawlBody = z.object({
 export const activateBotSchema = z.object({
   body: z.discriminatedUnion('type', [websiteCrawlBody, documentCrawlBody]),
   params: z.object({
-    hospitalId: z.string().min(1, 'hospitalId is required'),
+    chatbotId: z.string().min(1, 'chatbotId is required'),
   }),
 });
-

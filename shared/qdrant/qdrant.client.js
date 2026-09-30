@@ -17,7 +17,7 @@ const qdrantConfig = isProduction
 
 const qdrantClient = new QdrantClient(qdrantConfig);
 
-const COLLECTION_NAME = process.env.QDRANT_COLLECTION || 'hospital_knowledge';
+const COLLECTION_NAME = process.env.QDRANT_COLLECTION || 'chatbot_knowledge';
 
 export const ensureCollection = async (vectorSize) => {
     try {
@@ -32,7 +32,7 @@ export const ensureCollection = async (vectorSize) => {
     });
 
     await qdrantClient.createPayloadIndex(COLLECTION_NAME, {
-        field_name: 'hospitalId',
+        field_name: 'chatbotId',
         field_schema: 'keyword',
     });
 
@@ -44,16 +44,16 @@ export const ensureCollection = async (vectorSize) => {
     console.log(`[Qdrant] Collection "${COLLECTION_NAME}" created (dims=${vectorSize}).`);
 };
 
-export const deletePointsByHospital = async (hospitalId) => {
+export const deletePointsByChatbot = async (chatbotId) => {
     try {
         await qdrantClient.delete(COLLECTION_NAME, {
             filter: {
-                must: [{ key: 'hospitalId', match: { value: hospitalId } }],
+                must: [{ key: 'chatbotId', match: { value: chatbotId } }],
             },
         });
-        console.log(`[Qdrant] Deleted old points for hospital ${hospitalId}.`);
+        console.log(`[Qdrant] Deleted old points for chatbot ${chatbotId}.`);
     } catch (err) {
-        console.warn(`[Qdrant] deletePointsByHospital warning: ${err.message}`);
+        console.warn(`[Qdrant] deletePointsByChatbot warning: ${err.message}`);
     }
 };
 
@@ -70,27 +70,27 @@ export const deletePointsByIngestionId = async (ingestionId) => {
     }
 };
 
-export const deletePointsByHospitalExceptIngestion = async (hospitalId, keepIngestionId) => {
+export const deletePointsByChatbotExceptIngestion = async (chatbotId, keepIngestionId) => {
     try {
         await qdrantClient.delete(COLLECTION_NAME, {
             filter: {
                 must: [
-                    { key: 'hospitalId', match: { value: hospitalId } },
+                    { key: 'chatbotId', match: { value: chatbotId } },
                 ],
                 must_not: [
                     { key: 'ingestionId', match: { value: keepIngestionId } },
                 ],
             },
         });
-        console.log(`[Qdrant] Deleted old-ingestion points for hospital ${hospitalId} (keeping ${keepIngestionId}).`);
+        console.log(`[Qdrant] Deleted old-ingestion points for chatbot ${chatbotId} (keeping ${keepIngestionId}).`);
     } catch (err) {
-        console.warn(`[Qdrant] deletePointsByHospitalExceptIngestion warning: ${err.message}`);
+        console.warn(`[Qdrant] deletePointsByChatbotExceptIngestion warning: ${err.message}`);
     }
 };
 
-export const deterministicPointId = (hospitalId, fileRef, chunkIndex) => {
+export const deterministicPointId = (chatbotId, fileRef, chunkIndex) => {
     const hash = createHash('sha256')
-        .update(`${hospitalId}:${fileRef}:${chunkIndex}`)
+        .update(`${chatbotId}:${fileRef}:${chunkIndex}`)
         .digest('hex');
     return [
         hash.slice(0, 8),
@@ -101,14 +101,14 @@ export const deterministicPointId = (hospitalId, fileRef, chunkIndex) => {
     ].join('-');
 };
 
-export const upsertEmbeddedChunks = async (hospitalId, ingestionId, embeddedChunks) => {
+export const upsertEmbeddedChunks = async (chatbotId, ingestionId, embeddedChunks) => {
     const BATCH_SIZE = 100;
 
     const points = embeddedChunks.map((chunk) => ({
-        id: deterministicPointId(hospitalId, chunk.fileRef, chunk.chunkIndex),
+        id: deterministicPointId(chatbotId, chunk.fileRef, chunk.chunkIndex),
         vector: chunk.embedding,
         payload: {
-            hospitalId,
+            chatbotId,
             ingestionId,
             source: chunk.source,
             fileRef: chunk.fileRef,
@@ -122,7 +122,7 @@ export const upsertEmbeddedChunks = async (hospitalId, ingestionId, embeddedChun
         await qdrantClient.upsert(COLLECTION_NAME, { wait: true, points: batch });
     }
 
-    console.log(`[Qdrant] Upserted ${points.length} point(s) for hospital ${hospitalId} (ingestionId=${ingestionId}).`);
+    console.log(`[Qdrant] Upserted ${points.length} point(s) for chatbot ${chatbotId} (ingestionId=${ingestionId}).`);
     return points.length;
 };
 

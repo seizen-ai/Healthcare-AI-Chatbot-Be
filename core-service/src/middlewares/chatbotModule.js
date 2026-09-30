@@ -1,35 +1,35 @@
 import { catchAsync } from "../utils/CatchAsync.js";
-import hospitalRepository from "../modules/hospital/hospital.repository.js";
+import chatbotRepository from "../modules/chatbot/chatbot.repository.js";
 import { AppError } from "../utils/AppError.js";
 import { cacheService } from '../../../shared/redis/index.js';
 
-export const checkHospitalOwnerShip = catchAsync(async (req, res, next) => {
+export const checkChatbotOwnerShip = catchAsync(async (req, res, next) => {
     const userId = req.user.id;
-    const hospitalId = req.params.hospitalId;
+    const chatbotId = req.params.chatbotId;
 
-    const itemCacheKey = `hospital:${hospitalId}`;
+    const itemCacheKey = `chatbot:${chatbotId}`;
     const cached = await cacheService.get(itemCacheKey);
 
     if (cached && cached.ownerId === userId) {
-        req.hospital = cached;
+        req.chatbot = cached;
         return next();
     } else if (cached) {
-        throw new AppError('Hospital Not Found or Unauthorized', 404);
+        throw new AppError('Chatbot Not Found or Unauthorized', 404);
     }
 
-    const hospital = await hospitalRepository.getHospital({
+    const chatbot = await chatbotRepository.getChatbot({
         ownerId: userId,
-        _id: hospitalId,
+        _id: chatbotId,
         isDeleted: false
     });
 
-    if (!hospital) {
-        throw new AppError('Hospital Not Found or Unauthorized', 404);
+    if (!chatbot) {
+        throw new AppError('Chatbot Not Found or Unauthorized', 404);
     }
 
-    await cacheService.set(itemCacheKey, hospital);
+    await cacheService.set(itemCacheKey, chatbot);
 
-    req.hospital = hospital;
+    req.chatbot = chatbot;
     return next();
 });
 

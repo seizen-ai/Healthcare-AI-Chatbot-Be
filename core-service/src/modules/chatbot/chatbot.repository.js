@@ -1,41 +1,41 @@
-import { Hospital } from './hospital.model.js';
+import { Chatbot } from './chatbot.model.js';
 
-class hospitalRepository {
-    getHospital(query) {
-        return Hospital.findOne(query);
+class chatbotRepository {
+    getChatbot(query) {
+        return Chatbot.findOne(query);
     }
 
-    getHospitals(query, sortingOrder, limit) {
-        return Hospital.find(query).sort({ _id: sortingOrder }).limit(limit);
+    getChatbots(query, sortingOrder, limit) {
+        return Chatbot.find(query).sort({ _id: sortingOrder }).limit(limit);
     }
 
-    getPaginatedHospitals(query, sortingOrder, limit) {
-        return Hospital.find(query).sort({ _id: sortingOrder }).limit(limit);
+    getPaginatedChatbots(query, sortingOrder, limit) {
+        return Chatbot.find(query).sort({ _id: sortingOrder }).limit(limit);
     }
 
-    createHospital(data) {
-        return Hospital.create(data);
+    createChatbot(data) {
+        return Chatbot.create(data);
     }
 
     slugExists(slug) {
-        return Hospital.exists({ slug });
+        return Chatbot.exists({ slug });
     }
 
-    softDeleteHospital(query) {
-        return Hospital.findByIdAndUpdate(query, { isDeleted: true, deletedAt: new Date() }, { new: true });
+    softDeleteChatbot(query) {
+        return Chatbot.findByIdAndUpdate(query, { isDeleted: true, deletedAt: new Date() }, { new: true });
     }
 
-    updateOnboardingStep(hospitalId, step, extra = {}) {
-        return Hospital.findByIdAndUpdate(
-            hospitalId,
+    updateOnboardingStep(chatbotId, step, extra = {}) {
+        return Chatbot.findByIdAndUpdate(
+            chatbotId,
             { $set: { 'onboarding.step': step, ...extra } },
             { new: true }
         );
     }
 
-    setBotActivationInProgress(hospitalId, { eventId, type, requestedAt }) {
-        return Hospital.findByIdAndUpdate(
-            hospitalId,
+    setBotActivationInProgress(chatbotId, { eventId, type, requestedAt }) {
+        return Chatbot.findByIdAndUpdate(
+            chatbotId,
             {
                 $set: {
                     'onboarding.step': 'knowledge_processing',
@@ -49,9 +49,9 @@ class hospitalRepository {
         );
     }
 
-    setBotActivationSuccess(hospitalId, eventId) {
-        return Hospital.findOneAndUpdate(
-            { _id: hospitalId, 'botActivation.eventId': eventId },
+    setBotActivationSuccess(chatbotId, eventId) {
+        return Chatbot.findOneAndUpdate(
+            { _id: chatbotId, 'botActivation.eventId': eventId },
             {
                 $set: {
                     'onboarding.step': 'knowledge_ready',
@@ -65,9 +65,9 @@ class hospitalRepository {
         );
     }
 
-    setBotActivationFailed(hospitalId, eventId, errorMessage) {
-        return Hospital.findOneAndUpdate(
-            { _id: hospitalId, 'botActivation.eventId': eventId },
+    setBotActivationFailed(chatbotId, eventId, errorMessage) {
+        return Chatbot.findOneAndUpdate(
+            { _id: chatbotId, 'botActivation.eventId': eventId },
             {
                 $set: {
                     'onboarding.step': 'crawler_failed',
@@ -79,11 +79,11 @@ class hospitalRepository {
     }
 
     findStaleActivations(cutoffDate) {
-        return Hospital.find({
+        return Chatbot.find({
             'onboarding.step': 'knowledge_processing',
             'botActivation.requestedAt': { $lt: cutoffDate },
         });
     }
 }
 
-export default new hospitalRepository();
+export default new chatbotRepository();
