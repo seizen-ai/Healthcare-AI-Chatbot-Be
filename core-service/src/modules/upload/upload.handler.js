@@ -225,8 +225,11 @@ export const streamingUploadHandler = (req, res, next) => {
                 // Duplicate found, clean up uploaded object and respond
                 await deleteObject(objectKey).catch(() => { });
                 return res.status(200).json({
-                    status: 'already_uploaded',
-                    file: { id: existingDup._id, fileName: existingDup.fileName, fileRef: existingDup.fileRef },
+                    id: existingDup._id,
+                    fileName: existingDup.fileName,
+                    fileRef: existingDup.fileRef,
+                    mimeType: existingDup.mimeType,
+                    sizeBytes: existingDup.sizeBytes,
                 });
             }
 
@@ -258,8 +261,11 @@ export const streamingUploadHandler = (req, res, next) => {
                     if (existing) {
                         finished = true;
                         return res.status(200).json({
-                            status: 'already_uploaded',
-                            file: { id: existing._id, fileName: existing.fileName, fileRef: existing.fileRef },
+                            id: existing._id,
+                            fileName: existing.fileName,
+                            fileRef: existing.fileRef,
+                            mimeType: existing.mimeType,
+                            sizeBytes: existing.sizeBytes,
                         });
                     }
                 }
